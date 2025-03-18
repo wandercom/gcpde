@@ -74,7 +74,7 @@ class BuildFileNameProtocol(Protocol):
         Returns:
             str: The generated file name
         """
-        ...
+        ...  # pragma: no cover
 
 
 def _build_file_name(dataset: str, datetime_partition: DateTimePartitions) -> str:
