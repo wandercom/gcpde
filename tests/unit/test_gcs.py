@@ -42,6 +42,11 @@ def test_add_records_to_dataset(mock_upload_file: mock.Mock):
     # arrange
     mock_client = mock.Mock(spec_set=Client)
 
+    def custom_filename_builder(
+        dataset: str, datetime_partition: gcs.DateTimePartitions
+    ) -> str:
+        return f"custom_{dataset}_{datetime_partition.year}.jsonl"
+
     # act
     gcs.add_records_to_dataset(
         bucket_name="my-bucket",
@@ -49,14 +54,14 @@ def test_add_records_to_dataset(mock_upload_file: mock.Mock):
         dataset="dataset",
         version="1",
         client=mock_client,
+        build_file_name=custom_filename_builder,
     )
 
     # assert
     mock_upload_file.assert_called_with(
         content='{"id": "1"}\n{"id": "2"}',
         bucket_name="my-bucket",
-        file_name="dataset/version=1/year=2022/month=1/day=1/"
-        "dataset__2022-01-01T00:00.jsonl",
+        file_name="dataset/version=1/year=2022/month=1/day=1/custom_dataset_2022.jsonl",
         client=mock_client,
     )
 
