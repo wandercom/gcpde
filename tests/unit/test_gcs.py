@@ -1,4 +1,5 @@
 import datetime
+import json
 from unittest import mock
 
 import pytest
@@ -59,6 +60,49 @@ def test_add_records_to_dataset(mock_upload_file: mock.Mock):
         client=mock_client,
     )
 
+@time_machine.travel(
+    destination=datetime.datetime(2022, 1, 1, tzinfo=datetime.timezone.utc), tick=False
+)
+@mock.patch("gcpde.gcs._upload_file", autospec=True)
+def test_add_records_to_dataset_with_custom_filename_builder(mock_upload_file: mock.Mock):
+    # arrange
+    mock_client = mock.Mock(spec_set=Client)
+    def custom_filename_builder(
+        id: str
+    ) -> str:
+        return f"custom_{id}.jsonl"
+    json_str_records = [
+        '{"id": "1"}',
+        '{"id": "2"}'
+    ]
+    # act
+    for record in json_str_records:
+        gcs.add_records_to_dataset(
+            bucket_name="my-bucket",
+            json_str_records=[record],
+            dataset="dataset",
+            version="1",
+            client=mock_client,
+            build_file_name=lambda: custom_filename_builder(
+                id=json.loads(record)["id"]
+            ),
+        )
+
+    # assert
+    mock_upload_file.assert_has_calls([
+        mock.call(
+            content='{"id": "1"}',
+            bucket_name="my-bucket",
+            file_name="dataset/version=1/year=2022/month=1/day=1/custom_1.jsonl",
+            client=mock_client,
+        ),
+        mock.call(
+            content='{"id": "2"}',
+            bucket_name="my-bucket",
+            file_name="dataset/version=1/year=2022/month=1/day=1/custom_2.jsonl",
+            client=mock_client,
+        ),
+    ])
 
 @mock.patch(
     "google.oauth2.service_account.Credentials.from_service_account_info", autospec=True
