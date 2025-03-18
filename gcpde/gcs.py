@@ -4,7 +4,7 @@ import asyncio
 import io
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import tenacity
 from aiohttp import ClientResponseError, ClientSession, ClientTimeout
@@ -62,7 +62,23 @@ def _build_file_path(
         f"month={datetime_partition.month}/"
         f"day={datetime_partition.day}"
     )
-    return f"{dataset}/{partitions_path}/{dataset}__{datetime_partition}.jsonl"
+    return f"{dataset}/{partitions_path}/"
+
+
+class BuildFileNameProtocol(Protocol):
+    """Protocol for building file names."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> str:
+        """Build a file name with any number of arguments.
+
+        Returns:
+            str: The generated file name
+        """
+        ...  # pragma: no cover
+
+
+def _build_file_name(dataset: str, datetime_partition: DateTimePartitions) -> str:
+    return f"{dataset}__{datetime_partition}.jsonl"
 
 
 def _get_gcs_client(
@@ -122,6 +138,7 @@ def add_records_to_dataset(
     datetime_partition: Optional[DateTimePartitions] = None,
     json_key: Optional[Dict[str, str]] = None,
     client: Optional[StorageClient] = None,
+    build_file_name: Optional[BuildFileNameProtocol] = None,
 ) -> None:
     """Add a jsonl file to gcs using our file path conventions.
 
@@ -133,6 +150,8 @@ def add_records_to_dataset(
         bucket_name: temporal partitioning for the object path.
         json_key: json key with gcp credentials.
         client: google storage client to use for connecting to the API.
+        build_file_name: optional callable that generates the file name.
+            If not provided, defaults to internal _build_file_name method.
 
     """
     _check_auth_args(json_key=json_key, client=client)
@@ -148,15 +167,21 @@ def add_records_to_dataset(
         year=ts_now.year, month=ts_now.month, day=ts_now.day, hour=ts_now.hour
     )
 
-    file_name = _build_file_path(
+    file_path = _build_file_path(
         dataset=dataset, version=version, datetime_partition=datetime_partition
     )
+    file_name = (
+        build_file_name()
+        if build_file_name
+        else _build_file_name(dataset=dataset, datetime_partition=datetime_partition)
+    )
+
     jsonl_file_str = "\n".join(json_str_records)
 
     _upload_file(
         content=jsonl_file_str,
         bucket_name=bucket_name,
-        file_name=file_name,
+        file_name=file_path + file_name,
         client=client or _get_gcs_client(json_key=json_key or {}),
     )
     logger.info(f"File {file_name} created successfully!")
