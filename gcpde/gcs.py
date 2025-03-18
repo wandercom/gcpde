@@ -170,8 +170,10 @@ def add_records_to_dataset(
     file_path = _build_file_path(
         dataset=dataset, version=version, datetime_partition=datetime_partition
     )
-    file_name = (build_file_name or _build_file_name)(
-        dataset=dataset, datetime_partition=datetime_partition
+    file_name = (
+        build_file_name()
+        if build_file_name
+        else _build_file_name(dataset=dataset, datetime_partition=datetime_partition)
     )
 
     jsonl_file_str = "\n".join(json_str_records)
