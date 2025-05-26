@@ -1,7 +1,5 @@
 """Google Sheets client."""
 
-from typing import Iterator, Sequence
-
 import gspread
 from gspread import Spreadsheet, Worksheet
 from loguru import logger
@@ -45,6 +43,8 @@ def replace_from_records(
         document_id: id for the document (can be retrieved from the url).
         sheet_name: name of the sheet to replace with new records.
         records: list of records to add to the document.
+            Prefer to use only strings and numbers. datetime for example will not
+            serialize.
         columns: name of the columns expected in the given records.
         json_key: json key with gcp credentials.
 
@@ -54,13 +54,8 @@ def replace_from_records(
         sheet_name=sheet_name, document_id=document_id, json_key=json_key
     )
     sheet.clear()
-
-    def generate_rows() -> Iterator[Sequence[str | None]]:
-        yield columns
-        for row in records:
-            yield [row.get(c) for c in columns]
-
-    sheet.update(values=generate_rows(), range_name="A1")
+    records_as_row = [[r[c] for c in columns] for r in records]
+    sheet.update(values=[columns] + records_as_row, range_name="A1")
     logger.info("Document update finished!")
 
 
