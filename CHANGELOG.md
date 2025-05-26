@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/wandercom/gcpde/releases/tag/v0.3.1)
+- 🐛 fix bug on replace_from_records based on the new release of gspread
+
 ## [0.3.0](https://github.com/wandercom/gcpde/releases/tag/v0.3.0)
  - ✨ allow custom file naming for add_records_to_dataset
 
