@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/wandercom/gcpde/releases/tag/v0.4.0)
+- ✨ add create_table_from_query
+
 ## [0.3.1](https://github.com/wandercom/gcpde/releases/tag/v0.3.1)
 - 🐛 fix bug on replace_from_records based on the new release of gspread
 
