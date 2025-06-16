@@ -262,3 +262,24 @@ def test_query_to_df():
 
     # assert
     assert df.equals(pd.DataFrame([{"col": "value"}]))
+
+
+def test_create_table_from_query():
+    # arrange
+    mock_client = Mock(spec_set=bq.BigQueryClient)
+    mock_client.run_command.return_value = None
+
+    # act
+    bq.create_table_from_query(
+        query="select * from table",
+        dataset="dataset",
+        table="table",
+        client=mock_client,
+        timeout=10,
+    )
+
+    # assert
+    mock_client.run_command.assert_called_once_with(
+        command_sql="create or replace table dataset.table as select * from table",
+        timeout=10,
+    )

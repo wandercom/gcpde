@@ -422,6 +422,33 @@ def create_table_from_records(
     )
 
 
+def create_table_from_query(
+    query: str,
+    dataset: str,
+    table: str,
+    json_key: dict[str, str] | None = None,
+    client: BigQueryClient | None = None,
+    timeout: int = FIVE_MINUTES,
+) -> None:
+    """Create a table from a query.
+
+    Args:
+        query: query to create a table from. should be a select statement.
+        dataset: dataset name.
+        table: table name.
+        json_key: json key with gcp credentials.
+        client: client to connect to gcp.
+        timeout: timeout in seconds. Default is 5 minutes.
+
+    Raises:
+        BigQueryClientException if the operation is not successful.
+
+    """
+    client = client or BigQueryClient(json_key=json_key or {})
+    create_or_replace_query = f"create or replace table {dataset}.{table} as {query}"
+    client.run_command(command_sql=create_or_replace_query, timeout=timeout)
+
+
 def select(
     query: str,
     timeout: int = 10,
