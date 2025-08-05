@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/wandercom/gcpde/releases/tag/v0.5.0)
+- 📌 decrease dependency of tenacity
+
 ## [0.4.0](https://github.com/wandercom/gcpde/releases/tag/v0.4.0)
 - ✨ add create_table_from_query
 
