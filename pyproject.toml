@@ -11,7 +11,7 @@ license = {text = "MIT"}
 dependencies = [
     "loguru>=0.7.2,<1.0.0",
     "pydantic>=2.8.2,<3.0.0",
-    "tenacity>=9.0.0,<10.0.0",
+    "tenacity>=8.2.3,<10.0.0",
     "bigquery_schema_generator @ git+https://github.com/bxparks/bigquery-schema-generator@v1.6.1",
     "google-cloud-storage>=3.1.0,<4.0.0",
     "gcloud-aio-storage>=9.3.0,<10.0.0",
