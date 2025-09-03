@@ -410,13 +410,19 @@ def test_upsert_table_from_records_schema_mismatch():
     mock_client.delete_table.assert_not_called()
     mock_client.create_table.assert_not_called()
 
+
 def test_big_query_schema_mismatch_exception():
     # arrange
     source_schema = [{"name": "id"}]
     target_schema = [{"name": "id"}]
 
     # act
-    exception = bq.BigQuerySchemaMismatchException(message="message", source_schema=source_schema, target_schema=target_schema)
+    exception = bq.BigQuerySchemaMismatchException(
+        message="message", source_schema=source_schema, target_schema=target_schema
+    )
 
     # assert
-    assert str(exception) == "message\nSource schema: [{'name': 'id'}]\nTarget schema: [{'name': 'id'}]"
+    assert (
+        str(exception)
+        == "message\nSource schema: [{'name': 'id'}]\nTarget schema: [{'name': 'id'}]"
+    )
