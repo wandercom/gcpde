@@ -194,7 +194,7 @@ class BigQuerySchemaMismatchException(Exception):
         self.source_schema = source_schema
         self.target_schema = target_schema
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{self.message}\n"
             f"Source schema: {self.source_schema}\n"
