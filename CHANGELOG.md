@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/wandercom/gcpde/releases/tag/v0.6.0)
+- ✨ Add upsert from records
+
 ## [0.5.0](https://github.com/wandercom/gcpde/releases/tag/v0.5.0)
 - 📌 decrease dependency of tenacity
 
