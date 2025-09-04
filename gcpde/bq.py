@@ -55,12 +55,21 @@ class BigQueryClient:
             True if the table exists, False otherwise.
 
         """
-        table_ref = self._create_table_reference(dataset, table)
         try:
-            self.client.get_table(table=table_ref)
+            self.get_table(dataset, table)
             return True
         except NotFound:
             return False
+
+    def get_table(self, dataset: str, table: str) -> bigquery.Table:
+        """Get a table from bigquery.
+
+        Args:
+            dataset: dataset name.
+            table: table name.
+        """
+        table_ref = self._create_table_reference(dataset, table)
+        return self.client.get_table(table=table_ref)
 
     def create_table(
         self,
@@ -169,6 +178,28 @@ class BigQueryClient:
 
 class BigQueryClientException(Exception):
     """Base exception for connection or command errors."""
+
+
+class BigQuerySchemaMismatchException(Exception):
+    """Exception for schema mismatch."""
+
+    def __init__(
+        self,
+        message: str,
+        source_schema: list[bigquery.SchemaField],
+        target_schema: list[bigquery.SchemaField],
+    ):
+        super().__init__(message)
+        self.message = message
+        self.source_schema = source_schema
+        self.target_schema = target_schema
+
+    def __str__(self) -> str:
+        return (
+            f"{self.message}\n"
+            f"Source schema: {self.source_schema}\n"
+            f"Target schema: {self.target_schema}"
+        )
 
 
 def delete_table(
@@ -341,6 +372,89 @@ def create_or_replace_table_as(
     logger.info(f"Running `{command_sql}`...")
     client.run_command(command_sql=command_sql)
     logger.info("Command executed!")
+
+
+def upsert_table_from_records(
+    dataset: str,
+    table: str,
+    records: ListJsonType,
+    key_field: str,
+    json_key: dict[str, str] | None = None,
+    insert_chunk_size: int | None = None,
+    client: BigQueryClient | None = None,
+) -> None:
+    """Upsert records into a table.
+
+    This function performs an upsert (update/insert) operation by:
+    1. Creating a temporary table with the new records
+    2. using MERGE statement to update/insert records
+    3. Cleaning up temporary table
+
+    Args:
+        dataset: dataset name.
+        table: table name.
+        records: records to be upserted.
+        key_field: field used to match records for update.
+        json_key: json key with gcp credentials.
+        insert_chunk_size: chunk size for batch inserts.
+        client: client to connect to BigQuery.
+
+    Raises:
+        BigQuerySchemaMismatchException: if schema of new records doesn't match table.
+        BigQueryClientException: if schema cannot be inferred from records.
+    """
+    if not records:
+        logger.warning("No records to create a table from! (empty collection given)")
+        return
+
+    client = client or BigQueryClient(json_key=json_key or {})
+    tmp_table = table + "_tmp"
+
+    create_table_from_records(
+        dataset=dataset,
+        table=tmp_table,
+        records=records,
+        overwrite=True,
+        json_key=json_key,
+        client=client,
+        chunk_size=insert_chunk_size,
+    )
+
+    tmp_table_schema_bq = client.get_table(dataset, tmp_table).schema
+    table_schema_bq = client.get_table(dataset, table).schema
+
+    if table_schema_bq != tmp_table_schema_bq:
+        logger.info("Cleaning up temporary table...")
+        delete_table(dataset=dataset, table=tmp_table, client=client)
+
+        raise BigQuerySchemaMismatchException(
+            message="New data schema does not match table schema",
+            source_schema=table_schema_bq,
+            target_schema=tmp_table_schema_bq,
+        )
+
+    update_statement = ", ".join(
+        [f"{field.name} = source.{field.name}" for field in table_schema_bq]
+    )
+    table_fields = ", ".join([field.name for field in table_schema_bq])
+
+    merge_command_sql = (
+        f"MERGE INTO {dataset}.{table} AS target "
+        f"USING {dataset}.{tmp_table} AS source "
+        f"ON source.{key_field} = target.{key_field} "
+        f"WHEN MATCHED THEN "
+        f"UPDATE SET {update_statement} "
+        f"WHEN NOT MATCHED THEN "
+        f"INSERT ({table_fields}) "
+        f"VALUES ({table_fields})"
+    )
+
+    logger.info(f"Running `{merge_command_sql}`...")
+    client.run_command(command_sql=merge_command_sql)
+    logger.info("Command executed!")
+
+    logger.info("Cleaning up temporary table...")
+    delete_table(dataset=dataset, table=tmp_table, client=client)
 
 
 def replace_table(
