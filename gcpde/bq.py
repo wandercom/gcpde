@@ -387,9 +387,8 @@ def upsert_table_from_records(
 
     This function performs an upsert (update/insert) operation by:
     1. Creating a temporary table with the new records
-    2. Deleting matching records from target table based on key_field
-    3. Inserting the new records into target table
-    4. Cleaning up temporary table
+    2. using MERGE statement to update/insert records
+    3. Cleaning up temporary table
 
     Args:
         dataset: dataset name.
@@ -404,60 +403,57 @@ def upsert_table_from_records(
         BigQuerySchemaMismatchException: if schema of new records doesn't match table.
         BigQueryClientException: if schema cannot be inferred from records.
     """
-    client = client or BigQueryClient(json_key=json_key or {})
-
     if not records:
         logger.warning("No records to create a table from! (empty collection given)")
         return
 
-    data_schema_json = _create_schema_from_records(records=records or [])
-    data_schema_bq = [
-        bigquery.SchemaField.from_api_repr(field) for field in data_schema_json
-    ]
-
-    table_schema_bq = client.get_table(dataset, table).schema
-
-    if table_schema_bq != data_schema_bq:
-        raise BigQuerySchemaMismatchException(
-            message="New data schema does not match table schema",
-            source_schema=table_schema_bq,
-            target_schema=data_schema_bq,
-        )
-
-    # set up tmp table
+    client = client or BigQueryClient(json_key=json_key or {})
     tmp_table = table + "_tmp"
-    delete_table(dataset=dataset, table=tmp_table, client=client)
-    create_table(
-        dataset=dataset, table=tmp_table, schema=data_schema_json, client=client
-    )
-    insert(
+
+    create_table_from_records(
         dataset=dataset,
         table=tmp_table,
         records=records,
+        overwrite=True,
+        json_key=json_key,
         client=client,
         chunk_size=insert_chunk_size,
     )
 
-    # delete records from target table
-    command_sql = (
-        f"delete from {dataset}.{table} "
-        f"where {key_field} in (select {key_field} from {dataset}.{tmp_table})"
+    tmp_table_schema_bq = client.get_table(dataset, tmp_table).schema
+    table_schema_bq = client.get_table(dataset, table).schema
+
+    if table_schema_bq != tmp_table_schema_bq:
+        logger.info("Cleaning up temporary table...")
+        delete_table(dataset=dataset, table=tmp_table, client=client)
+
+        raise BigQuerySchemaMismatchException(
+            message="New data schema does not match table schema",
+            source_schema=table_schema_bq,
+            target_schema=tmp_table_schema_bq,
+        )
+
+    update_statement = ", ".join(
+        [f"{field.name} = source.{field.name}" for field in table_schema_bq]
+    )
+    table_fields = ", ".join([field.name for field in table_schema_bq])
+
+    merge_command_sql = (
+        f"MERGE INTO {dataset}.{table} AS target "
+        f"USING {dataset}.{tmp_table} AS source "
+        f"ON source.{key_field} = target.{key_field} "
+        f"WHEN MATCHED THEN "
+        f"UPDATE SET {update_statement} "
+        f"WHEN NOT MATCHED THEN "
+        f"INSERT ({table_fields}) "
+        f"VALUES ({table_fields})"
     )
 
-    logger.info(f"Running `{command_sql}`...")
-    client.run_command(command_sql=command_sql)
+    logger.info(f"Running `{merge_command_sql}`...")
+    client.run_command(command_sql=merge_command_sql)
     logger.info("Command executed!")
 
-    # insert records into target table
-    insert(
-        dataset=dataset,
-        table=table,
-        records=records,
-        client=client,
-        chunk_size=insert_chunk_size,
-    )
-
-    # clean up temporary table
+    logger.info("Cleaning up temporary table...")
     delete_table(dataset=dataset, table=tmp_table, client=client)
 
 

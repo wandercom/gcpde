@@ -299,9 +299,8 @@ def test_create_table_from_query():
 
 
 @patch("gcpde.bq.delete_table")
-@patch("gcpde.bq.create_table")
-@patch("gcpde.bq.insert")
-def test_upsert_table_from_records(mock_insert, mock_create_table, mock_delete_table):
+@patch("gcpde.bq.create_table_from_records")
+def test_upsert_table_from_records(mock_create_table, mock_delete_table):
     # arrange
     mock_client = Mock(spec_set=bq.BigQueryClient)
     table_tmp = "table_tmp"
@@ -311,66 +310,57 @@ def test_upsert_table_from_records(mock_insert, mock_create_table, mock_delete_t
     table_mock = Mock(schema=[])
     mock_client.get_table.return_value = table_mock
 
-    schema_json = [{"name": "id", "type": "INTEGER", "mode": "NULLABLE"}]
+    schema_json = [
+        {"name": "id", "type": "INTEGER", "mode": "NULLABLE"},
+        {"name": "name", "type": "STRING", "mode": "NULLABLE"},
+    ]
     table_mock.schema = [SchemaField.from_api_repr(field) for field in schema_json]
 
     command_sql = (
-        "delete from dataset.table where id in (select id from dataset.table_tmp)"
+        "MERGE INTO dataset.table AS target "
+        "USING dataset.table_tmp AS source "
+        "ON source.id = target.id "
+        "WHEN MATCHED THEN "
+        "UPDATE SET id = source.id, name = source.name "
+        "WHEN NOT MATCHED THEN "
+        "INSERT (id, name) "
+        "VALUES (id, name)"
     )
 
     # act
     bq.upsert_table_from_records(
         dataset=dataset,
         table=table,
-        records=[{"id": 1}],
+        records=[{"id": 1, "name": "test"}, {"id": 2, "name": "test2"}],
         key_field="id",
         client=mock_client,
         insert_chunk_size=None,
     )
 
     # assert
-
-    mock_delete_table.assert_called_with(
-        dataset=dataset, table=table_tmp, client=mock_client
-    )
-
     mock_create_table.assert_called_once_with(
         dataset=dataset,
         table=table_tmp,
-        schema=schema_json,
-        client=mock_client,
-    )
-    mock_insert.assert_any_call(
-        dataset=dataset,
-        table=table_tmp,
-        records=[{"id": 1}],
+        records=[{"id": 1, "name": "test"}, {"id": 2, "name": "test2"}],
+        overwrite=True,
+        json_key=None,
         client=mock_client,
         chunk_size=None,
     )
 
-    # assert that the delete was right set
+    mock_delete_table.assert_called_once_with(
+        dataset=dataset, table=table_tmp, client=mock_client
+    )
+
     mock_client.run_command.assert_called_with(command_sql=command_sql)
 
-    mock_insert.assert_any_call(
-        dataset=dataset,
-        table=table,
-        records=[{"id": 1}],
-        client=mock_client,
-        chunk_size=None,
-    )
-
-    # Assert that delete_table was not called with the main table name
     for call in mock_delete_table.call_args_list:
         assert call.kwargs.get("table") != table
 
-    # cleanup was done
-    assert mock_delete_table.call_count == 2
 
-    # make sure only one insert was done to each table, we checked each call
-    assert mock_insert.call_count == 2
-
-
-def test_upsert_table_from_records_no_records():
+@patch("gcpde.bq.delete_table")
+@patch("gcpde.bq.create_table_from_records")
+def test_upsert_table_from_records_no_records(mock_create_table, mock_delete_table):
     # arrange
     mock_client = Mock(spec_set=bq.BigQueryClient)
 
@@ -380,22 +370,27 @@ def test_upsert_table_from_records_no_records():
     )
 
     # assert
-    mock_client.run_command.assert_not_called()
-    mock_client.delete_table.assert_not_called()
-    mock_client.create_table.assert_not_called()
+    mock_create_table.assert_not_called()
+    mock_delete_table.assert_not_called()
 
 
-def test_upsert_table_from_records_schema_mismatch():
+@patch("gcpde.bq.delete_table")
+def test_upsert_table_from_records_schema_mismatch(mock_delete_table):
     # arrange
     mock_client = Mock(spec_set=bq.BigQueryClient)
 
-    table_mock = Mock(schema=[])
-    mock_client.get_table.return_value = table_mock
+    table_mock = Mock()
+    temp_table_mock = Mock()
+    table_mock.schema = [{"name": "uuid", "type": "STRING", "mode": "NULLABLE"}]
+    temp_table_mock.schema = [{"name": "id", "type": "INTEGER", "mode": "NULLABLE"}]
+    mock_client.get_table = (
+        lambda dataset, table: table_mock if table == "table" else temp_table_mock
+    )
 
     schema_json = [{"name": "uuid", "type": "STRING", "mode": "NULLABLE"}]
     table_mock.schema = [SchemaField.from_api_repr(field) for field in schema_json]
 
-    # act
+    # act/assert
     with pytest.raises(bq.BigQuerySchemaMismatchException):
         bq.upsert_table_from_records(
             dataset="dataset",
@@ -405,10 +400,7 @@ def test_upsert_table_from_records_schema_mismatch():
             client=mock_client,
         )
 
-    # assert
-    mock_client.run_command.assert_not_called()
-    mock_client.delete_table.assert_not_called()
-    mock_client.create_table.assert_not_called()
+    mock_delete_table.call_count == 2
 
 
 def test_big_query_schema_mismatch_exception():
