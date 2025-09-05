@@ -410,6 +410,7 @@ def test_upsert_table_from_records_schema_mismatch(mock_delete_table):
 
     mock_delete_table.call_count == 2
 
+
 @patch("gcpde.bq.create_table_from_records")
 def test_upsert_table_from_records_missing_target_table(mock_create_table):
     # arrange
@@ -452,3 +453,23 @@ def test_big_query_schema_mismatch_exception():
         str(exception)
         == "message\nSource schema: [{'name': 'id'}]\nTarget schema: [{'name': 'id'}]"
     )
+
+
+def test_get_schema_from_json():
+    # arrange
+    schema_json = [
+        {"name": "id", "type": "INTEGER", "mode": "NULLABLE"},
+        {"name": "name", "type": "STRING", "mode": "REQUIRED"},
+    ]
+
+    # act
+    result = bq.get_schema_from_json(schema_json)
+
+    # assert
+    assert len(result) == 2
+    assert result[0].name == "id"
+    assert result[0].field_type == "INTEGER"
+    assert result[0].mode == "NULLABLE"
+    assert result[1].name == "name"
+    assert result[1].field_type == "STRING"
+    assert result[1].mode == "REQUIRED"

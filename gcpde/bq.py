@@ -13,7 +13,7 @@ from google.cloud.exceptions import Conflict
 from google.oauth2.service_account import Credentials
 from loguru import logger
 
-from gcpde.types import ListJsonType
+from gcpde.types import BigQuerySchema, ListJsonType
 
 FIVE_MINUTES = 1 * 60 * 5
 
@@ -75,7 +75,7 @@ class BigQueryClient:
         self,
         dataset: str,
         table: str,
-        schema: list[bigquery.SchemaField],
+        schema: BigQuerySchema,
     ) -> None:
         """Create a new table on bigquery.
 
@@ -84,8 +84,9 @@ class BigQueryClient:
         Args:
             dataset: dataset name.
             table: table name.
-            schema: list of bigquery.SchemaField for the table.
-                https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
+            schema: BigQuerySchema for the table. Use
+                gcpde.bq.get_schema_from_json to create it from a list of
+                dictionaries.
 
         Raises:
             google.cloud.exceptions.Conflict: if the table already exists.
@@ -186,8 +187,8 @@ class BigQuerySchemaMismatchException(Exception):
     def __init__(
         self,
         message: str,
-        source_schema: list[bigquery.SchemaField],
-        target_schema: list[bigquery.SchemaField],
+        source_schema: BigQuerySchema,
+        target_schema: BigQuerySchema,
     ):
         super().__init__(message)
         self.message = message
@@ -200,6 +201,19 @@ class BigQuerySchemaMismatchException(Exception):
             f"Source schema: {self.source_schema}\n"
             f"Target schema: {self.target_schema}"
         )
+
+
+def get_schema_from_json(schema: list[dict[str, str]]) -> BigQuerySchema:
+    """Get a schema from a list of dictionaries.
+
+    Args:
+        schema: list of dictionaries representing the schema.
+        ref: https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
+
+    Returns:
+        BigQuerySchema
+    """
+    return [bigquery.SchemaField.from_api_repr(field) for field in schema]
 
 
 def delete_table(
@@ -228,7 +242,7 @@ def delete_table(
     return
 
 
-def _create_schema_from_records(records: ListJsonType) -> list[bigquery.SchemaField]:
+def _create_schema_from_records(records: ListJsonType) -> BigQuerySchema:
     generator = SchemaGenerator(
         input_format="dict",
         keep_nulls=True,
@@ -242,9 +256,7 @@ def _create_schema_from_records(records: ListJsonType) -> list[bigquery.SchemaFi
             f"Can't infer schema from records, error: {error_logs}"
         )
     output_json: list[dict[str, str]] = generator.flatten_schema(schema_map)
-    output_api: list[bigquery.SchemaField] = [
-        bigquery.SchemaField.from_api_repr(field) for field in output_json
-    ]
+    output_api: BigQuerySchema = get_schema_from_json(output_json)
     logger.debug("Schema generator complete!")
     return output_api
 
@@ -261,7 +273,7 @@ def _create_schema_from_records(records: ListJsonType) -> list[bigquery.SchemaFi
 def create_table(
     dataset: str,
     table: str,
-    schema: list[bigquery.SchemaField] | None = None,
+    schema: BigQuerySchema | None = None,
     schema_from_records: ListJsonType | None = None,
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
@@ -273,8 +285,9 @@ def create_table(
     Args:
         dataset: dataset name.
         table: table name.
-        schema: list of bigquery.SchemaField for the table.
-            https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
+        schema: BigQuerySchema for the table. Use
+            gcpde.bq.get_schema_from_json to create it from a list of
+            dictionaries.
         schema_from_records: infer schema from a records sample.
         json_key: json key with gcp credentials.
         client: client to connect to gcp.
@@ -488,7 +501,7 @@ def replace_table(
     dataset: str,
     table: str,
     records: ListJsonType,
-    schema: list[bigquery.SchemaField] | None = None,
+    schema: BigQuerySchema | None = None,
     chunk_size: int | None = None,
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
@@ -529,7 +542,7 @@ def create_table_from_records(
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
     chunk_size: int | None = None,
-    schema: list[bigquery.SchemaField] | None = None,
+    schema: BigQuerySchema | None = None,
 ) -> None:
     """Create or replace a table from a collection of records.
 
@@ -541,8 +554,9 @@ def create_table_from_records(
         json_key: json key with gcp credentials.
         client: client to connect to gcp.
         chunk_size: chunk size number to send to GCP API.
-        schema: list of bigquery.SchemaField for the table.
-            if None, it will be inferred from the records.
+        schema: BigQuerySchema for the table. Use
+            gcpde.bq.get_schema_from_json to create it from a list of
+            dictionaries.
 
     """
     if not records:
