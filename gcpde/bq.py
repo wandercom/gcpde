@@ -84,7 +84,7 @@ class BigQueryClient:
         Args:
             dataset: dataset name.
             table: table name.
-            schema: json dict schema for the table.
+            schema: list of bigquery.SchemaField for the table.
                 https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
 
         Raises:
@@ -273,7 +273,7 @@ def create_table(
     Args:
         dataset: dataset name.
         table: table name.
-        schema: json dict schema for the table or list of bigquery.SchemaField.
+        schema: list of bigquery.SchemaField for the table.
             https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
         schema_from_records: infer schema from a records sample.
         json_key: json key with gcp credentials.
@@ -541,7 +541,7 @@ def create_table_from_records(
         json_key: json key with gcp credentials.
         client: client to connect to gcp.
         chunk_size: chunk size number to send to GCP API.
-        schema: json dict schema for the table or list of bigquery.SchemaField.
+        schema: list of bigquery.SchemaField for the table.
             if None, it will be inferred from the records.
 
     """
