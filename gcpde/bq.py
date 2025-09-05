@@ -75,7 +75,7 @@ class BigQueryClient:
         self,
         dataset: str,
         table: str,
-        schema: list[dict[str, str]],
+        schema: list[bigquery.SchemaField],
     ) -> None:
         """Create a new table on bigquery.
 
@@ -94,7 +94,7 @@ class BigQueryClient:
         table_ref = self._create_table_reference(dataset, table)
         table_obj = bigquery.Table(
             table_ref=table_ref,
-            schema=[bigquery.SchemaField.from_api_repr(field) for field in schema],
+            schema=schema,
         )
         self.client.create_table(table_obj)
 
@@ -228,7 +228,7 @@ def delete_table(
     return
 
 
-def _create_schema_from_records(records: ListJsonType) -> list[dict[str, str]]:
+def _create_schema_from_records(records: ListJsonType) -> list[bigquery.SchemaField]:
     generator = SchemaGenerator(
         input_format="dict",
         keep_nulls=True,
@@ -241,9 +241,12 @@ def _create_schema_from_records(records: ListJsonType) -> list[dict[str, str]]:
         raise BigQueryClientException(
             f"Can't infer schema from records, error: {error_logs}"
         )
-    output: list[dict[str, str]] = generator.flatten_schema(schema_map)
+    output_json: list[dict[str, str]] = generator.flatten_schema(schema_map)
+    output_api: list[bigquery.SchemaField] = [
+        bigquery.SchemaField.from_api_repr(field) for field in output_json
+    ]
     logger.debug("Schema generator complete!")
-    return output
+    return output_api
 
 
 @tenacity.retry(
@@ -258,7 +261,7 @@ def _create_schema_from_records(records: ListJsonType) -> list[dict[str, str]]:
 def create_table(
     dataset: str,
     table: str,
-    schema: list[dict[str, str]] | None = None,
+    schema: list[bigquery.SchemaField] | None = None,
     schema_from_records: ListJsonType | None = None,
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
@@ -270,7 +273,7 @@ def create_table(
     Args:
         dataset: dataset name.
         table: table name.
-        schema: json dict schema for the table.
+        schema: json dict schema for the table or list of bigquery.SchemaField.
             https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
         schema_from_records: infer schema from a records sample.
         json_key: json key with gcp credentials.
@@ -382,6 +385,7 @@ def upsert_table_from_records(
     json_key: dict[str, str] | None = None,
     insert_chunk_size: int | None = None,
     client: BigQueryClient | None = None,
+    use_target_schema: bool = True,
 ) -> None:
     """Upsert records into a table.
 
@@ -389,6 +393,9 @@ def upsert_table_from_records(
     1. Creating a temporary table with the new records
     2. using MERGE statement to update/insert records
     3. Cleaning up temporary table
+
+    > If the target table doesn't exist, it will be created using
+      inferred schema from records.
 
     Args:
         dataset: dataset name.
@@ -398,17 +405,33 @@ def upsert_table_from_records(
         json_key: json key with gcp credentials.
         insert_chunk_size: chunk size for batch inserts.
         client: client to connect to BigQuery.
+        use_target_schema: whether to use the schema of the target table or
+            infer from records for the temporary table.
 
     Raises:
         BigQuerySchemaMismatchException: if schema of new records doesn't match table.
         BigQueryClientException: if schema cannot be inferred from records.
     """
+    client = client or BigQueryClient(json_key=json_key or {})
+    tmp_table = table + "_tmp"
+
     if not records:
         logger.warning("No records to create a table from! (empty collection given)")
         return
 
-    client = client or BigQueryClient(json_key=json_key or {})
-    tmp_table = table + "_tmp"
+    try:
+        table_schema_bq = client.get_table(dataset, table).schema
+    except NotFound:
+        create_table_from_records(
+            dataset=dataset,
+            table=table,
+            records=records,
+            overwrite=False,
+            json_key=json_key,
+            client=client,
+            chunk_size=insert_chunk_size,
+        )
+        return
 
     create_table_from_records(
         dataset=dataset,
@@ -418,10 +441,14 @@ def upsert_table_from_records(
         json_key=json_key,
         client=client,
         chunk_size=insert_chunk_size,
+        schema=table_schema_bq if use_target_schema else None,
     )
 
-    tmp_table_schema_bq = client.get_table(dataset, tmp_table).schema
-    table_schema_bq = client.get_table(dataset, table).schema
+    tmp_table_schema_bq = (
+        table_schema_bq
+        if use_target_schema
+        else client.get_table(dataset, tmp_table).schema
+    )
 
     if table_schema_bq != tmp_table_schema_bq:
         logger.info("Cleaning up temporary table...")
@@ -429,8 +456,8 @@ def upsert_table_from_records(
 
         raise BigQuerySchemaMismatchException(
             message="New data schema does not match table schema",
-            source_schema=table_schema_bq,
-            target_schema=tmp_table_schema_bq,
+            source_schema=tmp_table_schema_bq,
+            target_schema=table_schema_bq,
         )
 
     update_statement = ", ".join(
@@ -461,7 +488,7 @@ def replace_table(
     dataset: str,
     table: str,
     records: ListJsonType,
-    schema: list[dict[str, str]] | None = None,
+    schema: list[bigquery.SchemaField] | None = None,
     chunk_size: int | None = None,
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
@@ -471,7 +498,13 @@ def replace_table(
 
     tmp_table = table + "_tmp"
     delete_table(dataset=dataset, table=tmp_table, client=client)
-    create_table(dataset=dataset, table=tmp_table, schema=schema, client=client)
+    create_table(
+        dataset=dataset,
+        table=tmp_table,
+        schema_from_records=records,
+        schema=schema,
+        client=client,
+    )
     insert(
         dataset=dataset,
         table=tmp_table,
@@ -496,6 +529,7 @@ def create_table_from_records(
     json_key: dict[str, str] | None = None,
     client: BigQueryClient | None = None,
     chunk_size: int | None = None,
+    schema: list[bigquery.SchemaField] | None = None,
 ) -> None:
     """Create or replace a table from a collection of records.
 
@@ -507,12 +541,13 @@ def create_table_from_records(
         json_key: json key with gcp credentials.
         client: client to connect to gcp.
         chunk_size: chunk size number to send to GCP API.
+        schema: json dict schema for the table or list of bigquery.SchemaField.
+            if None, it will be inferred from the records.
 
     """
     if not records:
         logger.warning("No records to create a table from! (empty collection given)")
         return
-    schema = _create_schema_from_records(records=records or [])
 
     client = client or BigQueryClient(json_key=json_key or {})
     if overwrite:
@@ -526,7 +561,13 @@ def create_table_from_records(
         )
         return
 
-    create_table(dataset=dataset, table=table, schema=schema, client=client)
+    create_table(
+        dataset=dataset,
+        table=table,
+        schema_from_records=records,
+        schema=schema,
+        client=client,
+    )
     insert(
         dataset=dataset,
         table=table,

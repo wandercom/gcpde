@@ -112,33 +112,37 @@ def test_create_table_from_records():
         {"json_col": {"col3": "abc"}},
     ]
     target_schema = [
-        {
-            "name": "id",
-            "type": "INTEGER",
-            "mode": "NULLABLE",
-        },
-        {
-            "name": "json_col",
-            "type": "RECORD",
-            "mode": "NULLABLE",
-            "fields": [
-                {
-                    "name": "col1",
-                    "type": "INTEGER",
-                    "mode": "NULLABLE",
-                },
-                {
-                    "name": "col2",
-                    "type": "BOOLEAN",
-                    "mode": "NULLABLE",
-                },
-                {
-                    "name": "col3",
-                    "type": "STRING",
-                    "mode": "NULLABLE",
-                },
-            ],
-        },
+        SchemaField.from_api_repr(
+            {
+                "name": "id",
+                "type": "INTEGER",
+                "mode": "NULLABLE",
+            }
+        ),
+        SchemaField.from_api_repr(
+            {
+                "name": "json_col",
+                "type": "RECORD",
+                "mode": "NULLABLE",
+                "fields": [
+                    {
+                        "name": "col1",
+                        "type": "INTEGER",
+                        "mode": "NULLABLE",
+                    },
+                    {
+                        "name": "col2",
+                        "type": "BOOLEAN",
+                        "mode": "NULLABLE",
+                    },
+                    {
+                        "name": "col3",
+                        "type": "STRING",
+                        "mode": "NULLABLE",
+                    },
+                ],
+            }
+        ),
     ]
 
     # act
@@ -171,11 +175,13 @@ def test_create_table_from_records_overwrite_false():
     mock_client = Mock(spec_set=bq.BigQueryClient)
     input_records = [{"id": 1}]
     target_schema = [
-        {
-            "name": "id",
-            "type": "INTEGER",
-            "mode": "NULLABLE",
-        }
+        SchemaField.from_api_repr(
+            {
+                "name": "id",
+                "type": "INTEGER",
+                "mode": "NULLABLE",
+            }
+        )
     ]
 
     # act
@@ -346,6 +352,7 @@ def test_upsert_table_from_records(mock_create_table, mock_delete_table):
         json_key=None,
         client=mock_client,
         chunk_size=None,
+        schema=table_mock.schema,
     )
 
     mock_delete_table.assert_called_once_with(
@@ -398,9 +405,36 @@ def test_upsert_table_from_records_schema_mismatch(mock_delete_table):
             records=[{"id": 1}],
             key_field="id",
             client=mock_client,
+            use_target_schema=False,
         )
 
     mock_delete_table.call_count == 2
+
+@patch("gcpde.bq.create_table_from_records")
+def test_upsert_table_from_records_missing_target_table(mock_create_table):
+    # arrange
+    mock_client = Mock(spec_set=bq.BigQueryClient)
+    mock_client.get_table.side_effect = NotFound("")
+
+    # act
+    bq.upsert_table_from_records(
+        dataset="dataset",
+        table="table",
+        records=[{"id": 1}],
+        key_field="id",
+        client=mock_client,
+    )
+
+    # assert
+    mock_create_table.assert_called_once_with(
+        dataset="dataset",
+        table="table",
+        records=[{"id": 1}],
+        overwrite=False,
+        json_key=None,
+        client=mock_client,
+        chunk_size=None,
+    )
 
 
 def test_big_query_schema_mismatch_exception():
