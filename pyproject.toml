@@ -1,6 +1,6 @@
 [project]
 name = "gcpde"
-version = "0.6.0"
+version = "0.7.0"
 description = "our opinionated usage of GCP services from a data engineering perspective"
 authors = [
     {name = "Wander"}
