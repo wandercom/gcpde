@@ -4,11 +4,11 @@ import asyncio
 import io
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import tenacity
 from aiohttp import ClientResponseError, ClientSession, ClientTimeout
-from gcloud.aio.storage import Bucket as AsyncBucket
 from gcloud.aio.storage import Storage as AsyncStorageClient
 from google.cloud.storage import Client as StorageClient
 from google.oauth2 import service_account
@@ -327,13 +327,25 @@ async def _async_list_files(
     bucket_name: str,
     prefix: str,
     client: AsyncStorageClient,
-    session: ClientSession,
+    api_params: Optional[Dict[str, Any]] = None,
+    updated_after: Optional[datetime] = None,
 ) -> List[str]:
-    paths = await AsyncBucket(storage=client, name=bucket_name).list_blobs(
-        prefix=prefix,
-        session=session,
+    extra_api_params = api_params or {}
+    search_result = await client.list_objects(
+        bucket=bucket_name,
+        params={"prefix": prefix, "delimiter": "/", **extra_api_params},
     )
-    file_paths = [path for path in paths if not path.endswith("/")]
+    items = search_result["items"]
+
+    if updated_after:
+        updated_after = updated_after.replace(tzinfo=timezone.utc)
+        items = [
+            item
+            for item in items
+            if datetime.fromisoformat(item["updated"]) >= updated_after
+        ]
+
+    file_paths = [item["name"] for item in items if not item["name"].endswith("/")]
     return file_paths
 
 
@@ -343,6 +355,8 @@ async def _async_list_files_handling_auth(
     json_key: Optional[Dict[str, str]],
     client: Optional[AsyncStorageClient],
     timeout: int,
+    api_params: Optional[Dict[str, Any]] = None,
+    updated_after: Optional[datetime] = None,
 ) -> List[str]:
     _check_auth_args(json_key=json_key, client=client)
     session_timeout = ClientTimeout(total=None, sock_connect=timeout, sock_read=timeout)
@@ -355,7 +369,8 @@ async def _async_list_files_handling_auth(
             bucket_name=bucket_name,
             prefix=prefix,
             client=client,
-            session=session,
+            api_params=api_params,
+            updated_after=updated_after,
         )
 
 
@@ -365,6 +380,8 @@ def list_files(
     json_key: Optional[Dict[str, str]] = None,
     client: Optional[AsyncStorageClient] = None,
     timeout: int = 300,
+    api_params: Optional[Dict[str, Any]] = None,
+    updated_after: Optional[datetime] = None,
 ) -> List[str]:
     """List files on gcs from a given prefix.
 
@@ -374,7 +391,8 @@ def list_files(
         json_key: auth to connect to gcp.
         client: client to user to make the API requests.
         timeout: timeout for the API requests.
-
+        api_params: parameters for the API request (ref. https://cloud.google.com/storage/docs/json_api/v1/objects/list).
+        updated_after: filter files updated after this datetime.
     """
     logger.info(f"Listing files from {prefix} on {bucket_name} bucket...")
     file_paths = asyncio.run(
@@ -384,6 +402,8 @@ def list_files(
             json_key=json_key,
             client=client,
             timeout=timeout,
+            api_params=api_params,
+            updated_after=updated_after,
         )
     )
     logger.info(f"{len(file_paths)} files found.")
@@ -434,7 +454,6 @@ async def _async_get_dataset(
             bucket_name=bucket_name,
             prefix=f"{dataset}/version={version}" if dataset else f"version={version}",
             client=client,
-            session=session,
         )
         target_file_paths = (
             _get_latest_path_files(file_paths=file_paths)

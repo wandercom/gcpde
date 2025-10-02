@@ -122,21 +122,68 @@ def test__get_gcs_client(
     assert isinstance(client, Client)
 
 
+@pytest.mark.asyncio
 @mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
-@mock.patch("gcloud.aio.storage.bucket.Bucket.list_blobs", autospec=True)
-def test_get_dataset(mock_list_blobs: mock.AsyncMock, mock_client: mock.Mock):
+async def test__async_list_files_updated_after(mock_client: mock.Mock):
     # arrange
-    async def mock_list_blobs_se(*args, **kwargs):
-        return [
-            "my-dataset/version=1/year=2022/month=1/day=1/"
-            "my-dataset__2022-01-01T00:00.jsonl",
-            "my-dataset/version=1/year=2022/month=1/day=1/"
-            "my-dataset__2022-01-01T01:00.jsonl",
-            "my-dataset/version=1/year=2022/month=1/day=1/"
-            "my-dataset__2022-01-01T03:00.jsonl",
+    mock_client.list_objects.return_value = {
+        "items": [
+            {
+                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_1.jsonl",
+                "updated": "2022-01-01T00:00:00.000000Z",
+            },
+            {
+                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
+                "updated": "2022-01-02T00:00:00.000000Z",
+            },
+            {
+                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
+                "updated": "2022-01-03T00:00:00.000000Z",
+            },
         ]
+    }
 
-    mock_list_blobs.side_effect = mock_list_blobs_se
+    # act
+    output = await gcs._async_list_files(
+        bucket_name="my-bucket",
+        prefix="my-dataset/version=1/year=2022/month=1/day=1/",
+        client=mock_client,
+        updated_after=datetime.datetime(2022, 1, 2),
+    )
+
+    # assert
+    assert output == [
+        "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
+        "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
+    ]
+
+
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+def test_get_dataset(mock_client: mock.Mock):
+    # arrange
+
+    mock_client.list_objects.return_value = {
+        "items": [
+            {
+                "name": (
+                    "my-dataset/version=1/year=2022/month=1/day=1/"
+                    "my-dataset__2022-01-01T00:00.jsonl"
+                )
+            },
+            {
+                "name": (
+                    "my-dataset/version=1/year=2022/month=1/day=1/"
+                    "my-dataset__2022-01-01T01:00.jsonl"
+                )
+            },
+            {
+                "name": (
+                    "my-dataset/version=1/year=2022/month=1/day=1/"
+                    "my-dataset__2022-01-01T03:00.jsonl"
+                )
+            },
+        ]
+    }
 
     async def mock_download(**kwargs):
         return b'{"id": "1"}\n{"id": "2"}'
