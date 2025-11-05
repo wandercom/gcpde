@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.9.0](https://github.com/wandercom/gcpde/releases/tag/v0.8.0)
+## [0.9.1](https://github.com/wandercom/gcpde/releases/tag/v0.9.1)
+* 🐛 use missing parameter head
+
+## [0.9.0](https://github.com/wandercom/gcpde/releases/tag/v0.9.0)
 * ✨ allow configuration of head end expected headers (#6)
 
 ## [0.8.0](https://github.com/wandercom/gcpde/releases/tag/v0.8.0)
