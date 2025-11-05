@@ -67,7 +67,6 @@ def read_sheet(
     json_key: dict[str, str],
     head: int = 1,
     expected_headers: Optional[list[str]] = None,
-
 ) -> list[dict[str, str | None]]:
     """Get all the data in a sheet from a document.
 
@@ -88,8 +87,7 @@ def read_sheet(
         sheet_name=sheet_name, document_id=document_id, json_key=json_key
     )
     records: ListJsonType = sheet.get_all_records(
-        head=1,
-        expected_headers=expected_headers
+        head=head, expected_headers=expected_headers
     )
     logger.info("Records successfully retrieve from document!")
     return [
