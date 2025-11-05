@@ -1,5 +1,7 @@
 """Google Sheets client."""
 
+from typing import Optional
+
 import gspread
 from gspread import Spreadsheet, Worksheet
 from loguru import logger
@@ -63,6 +65,9 @@ def read_sheet(
     document_id: str,
     sheet_name: str,
     json_key: dict[str, str],
+    head: int = 1,
+    expected_headers: Optional[list[str]] = None,
+
 ) -> list[dict[str, str | None]]:
     """Get all the data in a sheet from a document.
 
@@ -70,6 +75,9 @@ def read_sheet(
         document_id: id for the document (can be retrieved from the url).
         sheet_name: name of the sheet to read in the document.
         json_key: json key with gcp credentials.
+        head: (optional) Determines which row to use as keys,
+            starting from 1 following the numeration of the spreadsheet.
+        expected_headers: (optional) List of expected headers, they must be unique.
 
     Returns:
         List of records as json dict.
@@ -79,7 +87,10 @@ def read_sheet(
     sheet = _open_sheet(
         sheet_name=sheet_name, document_id=document_id, json_key=json_key
     )
-    records: ListJsonType = sheet.get_all_records()
+    records: ListJsonType = sheet.get_all_records(
+        head=1,
+        expected_headers=expected_headers
+    )
     logger.info("Records successfully retrieve from document!")
     return [
         {key: (str(value) or None) for key, value in record.items()}
