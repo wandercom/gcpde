@@ -376,6 +376,7 @@ async def _async_list_files_handling_auth(
     timeout: int,
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
+    updated_before: Optional[datetime] = None,
 ) -> List[str]:
     _check_auth_args(json_key=json_key, client=client)
     session_timeout = ClientTimeout(total=None, sock_connect=timeout, sock_read=timeout)
@@ -390,6 +391,7 @@ async def _async_list_files_handling_auth(
             client=client,
             api_params=api_params,
             updated_after=updated_after,
+            updated_before=updated_before,
         )
 
 
@@ -401,6 +403,7 @@ def list_files(
     timeout: int = 300,
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
+    updated_before: Optional[datetime] = None,
 ) -> List[str]:
     """List files on gcs from a given prefix.
 
@@ -412,6 +415,7 @@ def list_files(
         timeout: timeout for the API requests.
         api_params: parameters for the API request (ref. https://cloud.google.com/storage/docs/json_api/v1/objects/list).
         updated_after: filter files updated after this datetime.
+        updated_before: filter files updated before this datetime.
     """
     logger.info(f"Listing files from {prefix} on {bucket_name} bucket...")
     file_paths = asyncio.run(
@@ -423,6 +427,7 @@ def list_files(
             timeout=timeout,
             api_params=api_params,
             updated_after=updated_after,
+            updated_before=updated_before,
         )
     )
     logger.info(f"{len(file_paths)} files found.")
