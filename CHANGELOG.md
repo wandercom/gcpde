@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/wandercom/gcpde/releases/tag/v0.10.0)
+* ✨ Add Pagination and Updated Before filter to GCS List (#7)
+
 ## [0.9.1](https://github.com/wandercom/gcpde/releases/tag/v0.9.1)
 * 🐛 use missing parameter head
 
