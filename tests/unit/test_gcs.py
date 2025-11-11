@@ -171,9 +171,9 @@ async def test__async_list_files_updated_after_and_updated_before(
 
     # assert
     assert output == [
-        "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
-        "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
-        "my-dataset/version=1/year=2022/month=1/day=1/dataset_4.jsonl",
+        "my-dataset/version=1/year=2022/month=1/dataset_2.jsonl",
+        "my-dataset/version=1/year=2022/month=1/dataset_3.jsonl",
+        "my-dataset/version=1/year=2022/month=1/dataset_4.jsonl",
     ]
 
 
