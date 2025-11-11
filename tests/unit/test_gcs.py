@@ -124,32 +124,41 @@ def test__get_gcs_client(
 
 @pytest.mark.asyncio
 @mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
-async def test__async_list_files_updated_after_and_updated_before(mock_client: mock.Mock):
+async def test__async_list_files_updated_after_and_updated_before(
+    mock_client: mock.Mock,
+):
     # arrange
-    mock_client.list_objects.return_value = {
-        "items": [
-            {
-                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_1.jsonl",
-                "updated": "2022-01-01T00:00:00.000000Z",
-            },
-            {
-                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
-                "updated": "2022-01-02T00:00:00.000000Z",
-            },
-            {
-                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
-                "updated": "2022-01-03T00:00:00.000000Z",
-            },
-            {
-                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_4.jsonl",
-                "updated": "2022-01-04T00:00:00.000000Z",
-            },
-            {
-                "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_5.jsonl",
-                "updated": "2022-01-05T00:00:00.000000Z",
-            },
-        ]
-    }
+    mock_client.list_objects.side_effect = [
+        {
+            "items": [
+                {
+                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_1.jsonl",
+                    "updated": "2022-01-01T00:00:00.000000Z",
+                },
+                {
+                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
+                    "updated": "2022-01-02T00:00:00.000000Z",
+                },
+                {
+                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
+                    "updated": "2022-01-03T00:00:00.000000Z",
+                },
+            ],
+            "nextPageToken": "next_page_token",
+        },
+        {
+            "items": [
+                {
+                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_4.jsonl",
+                    "updated": "2022-01-04T00:00:00.000000Z",
+                },
+                {
+                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_5.jsonl",
+                    "updated": "2022-01-05T00:00:00.000000Z",
+                },
+            ]
+        },
+    ]
 
     # act
     output = await gcs._async_list_files(
