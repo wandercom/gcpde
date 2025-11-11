@@ -132,15 +132,15 @@ async def test__async_list_files_updated_after_and_updated_before(
         {
             "items": [
                 {
-                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_1.jsonl",
+                    "name": "my-dataset/version=1/year=2022/month=1/dataset_1.jsonl",
                     "updated": "2022-01-01T00:00:00.000000Z",
                 },
                 {
-                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_2.jsonl",
+                    "name": "my-dataset/version=1/year=2022/month=1/dataset_2.jsonl",
                     "updated": "2022-01-02T00:00:00.000000Z",
                 },
                 {
-                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_3.jsonl",
+                    "name": "my-dataset/version=1/year=2022/month=1/dataset_3.jsonl",
                     "updated": "2022-01-03T00:00:00.000000Z",
                 },
             ],
@@ -149,11 +149,11 @@ async def test__async_list_files_updated_after_and_updated_before(
         {
             "items": [
                 {
-                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_4.jsonl",
+                    "name": "my-dataset/version=1/year=2022/month=1/dataset_4.jsonl",
                     "updated": "2022-01-04T00:00:00.000000Z",
                 },
                 {
-                    "name": "my-dataset/version=1/year=2022/month=1/day=1/dataset_5.jsonl",
+                    "name": "my-dataset/version=1/year=2022/month=1/dataset_5.jsonl",
                     "updated": "2022-01-05T00:00:00.000000Z",
                 },
             ]
