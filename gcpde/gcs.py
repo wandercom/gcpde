@@ -92,7 +92,12 @@ class _CredentialsToken:
     async def get(self) -> str:
         """Return a valid access token, refreshing if needed."""
         if not self._credentials.valid:
-            self._credentials.refresh(google.auth.transport.requests.Request())  # type: ignore[no-untyped-call]
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                self._credentials.refresh,
+                google.auth.transport.requests.Request(),  # type: ignore[no-untyped-call]
+            )
         return self._credentials.token  # type: ignore[return-value]
 
     async def close(self) -> None:
