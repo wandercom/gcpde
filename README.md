@@ -3,7 +3,7 @@ A Python library that provides an opinionated interface for working with Google 
 
 ## Features
 - typing for GCS and BigQuery API
-- standardized auth using service account credentials
+- standardized auth using service account credentials or any `google-auth` credentials (ADC, impersonated, etc.)
 
 ### Google Cloud Storage (GCS)
 - upload and download files with retry logic and async capabilities
