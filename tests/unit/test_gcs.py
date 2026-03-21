@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 import time_machine
 from gcloud.aio.storage import Storage as AsyncStorageClient
+from google.auth.credentials import Credentials as GoogleCredentials
 from google.cloud.storage import Blob, Bucket, Client
 
 from gcpde import gcs
@@ -302,10 +303,102 @@ def test__check_auth_args_exception():
     # arrange
     json_key = None
     client = None
+    credentials = None
 
     # act and assert
     with pytest.raises(ValueError):
-        gcs._check_auth_args(json_key=json_key, client=client)
+        gcs._check_auth_args(json_key=json_key, credentials=credentials, client=client)
+
+
+@pytest.mark.asyncio
+async def test__credentials_token_get_valid():
+    # arrange
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+    mock_creds.valid = True
+    mock_creds.token = "my-access-token"
+    token = gcs._CredentialsToken(mock_creds)
+
+    # act
+    result = await token.get()
+
+    # assert
+    assert result == "my-access-token"
+    mock_creds.refresh.assert_not_called()
+
+
+@pytest.mark.asyncio
+@mock.patch("google.auth.transport.requests.Request", autospec=True)
+async def test__credentials_token_get_expired_refreshes(mock_request_cls):
+    # arrange
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+    mock_creds.valid = False
+    mock_creds.token = "refreshed-token"
+    token = gcs._CredentialsToken(mock_creds)
+
+    # act
+    result = await token.get()
+
+    # assert
+    assert result == "refreshed-token"
+    mock_creds.refresh.assert_called_once_with(mock_request_cls.return_value)
+
+
+@pytest.mark.asyncio
+async def test__credentials_token_close_is_noop():
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+    token = gcs._CredentialsToken(mock_creds)
+    await token.close()  # should not raise
+
+
+@mock.patch("google.cloud.storage.client.Client", autospec=True)
+def test__get_gcs_client_with_credentials(mock_storage_client_cls):
+    # arrange
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+
+    # act
+    gcs._get_gcs_client(credentials=mock_creds, client=mock_storage_client_cls)
+
+    # assert — credentials passed directly, no service account lookup
+    mock_storage_client_cls.assert_called_with(credentials=mock_creds)
+
+
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+def test__get_async_gcs_client_with_credentials(mock_async_storage_cls):
+    # arrange
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+    mock_session = mock.Mock()
+
+    # act
+    gcs._get_async_gcs_client(
+        json_key=None, credentials=mock_creds, session=mock_session
+    )
+
+    # assert — token is a _CredentialsToken wrapping the credentials
+    call_kwargs = mock_async_storage_cls.call_args.kwargs
+    assert isinstance(call_kwargs["token"], gcs._CredentialsToken)
+    assert call_kwargs["session"] is mock_session
+
+
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+def test__get_async_gcs_client_with_json_key(mock_async_storage_cls):
+    # arrange
+    mock_session = mock.Mock()
+
+    # act
+    gcs._get_async_gcs_client(
+        json_key={"auth": "key"}, credentials=None, session=mock_session
+    )
+
+    # assert — service_file is used instead of token
+    call_kwargs = mock_async_storage_cls.call_args.kwargs
+    assert "service_file" in call_kwargs
+    assert call_kwargs["session"] is mock_session
+
+
+def test__check_auth_args_passes_with_credentials():
+    mock_creds = mock.Mock(spec=GoogleCredentials)
+    # should not raise
+    gcs._check_auth_args(json_key=None, credentials=mock_creds, client=None)
 
 
 def test_add_records_to_dataset_no_records():
