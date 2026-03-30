@@ -25,6 +25,10 @@ A Python library that provides an opinionated interface for working with Google 
 pip install "git+https://github.com/wandercom/gcpde.git"
 ```
 
+## Dependency management and security
+
+Dependencies are resolved with `uv` using settings declared in `pyproject.toml`. A rolling 7-day cooldown (`exclude-newer`) ensures that package versions must be at least a week old before they can be added, giving the community time to spot and remove malicious uploads.
+
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
