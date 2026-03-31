@@ -1,0 +1,110 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '✨ Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+  - title: '🛡️ Security'
+    labels:
+      - 'security'
+  - title: '♻️ Refactoring'
+    labels:
+      - 'refactor'
+  - title: '📦 Dependencies'
+    labels:
+      - 'dependencies'
+  - title: '🧰 Chores'
+    labels:
+      - 'chore'
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^✨/'
+      - '/^:sparkles:/'
+      - '/^🎉/'
+      - '/^:tada:/'
+      - '/^💄/'
+      - '/^:lipstick:/'
+  - label: 'bug'
+    title:
+      - '/^🐛/'
+      - '/^:bug:/'
+      - '/^🚑/'
+      - '/^:ambulance:/'
+  - label: 'breaking-change'
+    title:
+      - '/^💥/'
+      - '/^:boom:/'
+  - label: 'security'
+    title:
+      - '/^🔒/'
+      - '/^:lock:/'
+      - '/^🛡/'
+  - label: 'refactor'
+    title:
+      - '/^♻/'
+      - '/^:recycle:/'
+  - label: 'documentation'
+    title:
+      - '/^📝/'
+      - '/^:memo:/'
+      - '/^📖/'
+      - '/^:book:/'
+  - label: 'dependencies'
+    title:
+      - '/^⬆/'
+      - '/^:arrow_up:/'
+      - '/^⬇/'
+      - '/^:arrow_down:/'
+      - '/^📌/'
+      - '/^:pushpin:/'
+  - label: 'chore'
+    title:
+      - '/^🔧/'
+      - '/^:wrench:/'
+      - '/^🔥/'
+      - '/^:fire:/'
+      - '/^✅/'
+      - '/^:white_check_mark:/'
+      - '/^🚀/'
+      - '/^:rocket:/'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'bug'
+      - 'security'
+      - 'refactor'
+      - 'chore'
+      - 'documentation'
+      - 'dependencies'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: $PREVIOUS_TAG...v$RESOLVED_VERSION

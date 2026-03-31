@@ -1,5 +1,6 @@
 # Changelog
-All notable changes to this project will be documented in this file.
+
+> **Deprecated:** This file is no longer maintained. Please refer to the [GitHub Releases](https://github.com/wandercom/gcpde/releases) page for the up-to-date changelog.
 
 ## [Unreleased]
 
