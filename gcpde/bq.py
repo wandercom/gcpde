@@ -1,5 +1,7 @@
 """BigQuery client using the official Google Cloud BigQuery package."""
 
+import base64
+import json
 import logging
 from typing import Sequence
 
@@ -13,7 +15,7 @@ from google.cloud.exceptions import Conflict
 from google.oauth2.service_account import Credentials
 from loguru import logger
 
-from gcpde.types import BigQuerySchema, ListJsonType
+from gcpde.types import BigQuerySchema, ListJsonType, PagedQueryResult
 
 FIVE_MINUTES = 1 * 60 * 5
 
@@ -158,6 +160,60 @@ class BigQueryClient:
         query_job = self.client.query(query, job_config=job_config)
         results = query_job.result(timeout=timeout)
         return [dict(row) for row in results]
+
+    def query_paginated(
+        self,
+        query: str,
+        page_size: int,
+        page_token: str | None = None,
+        timeout: int = FIVE_MINUTES,
+    ) -> PagedQueryResult:
+        """Query BigQuery and return a single page of results.
+
+        On the first call, pass ``page_token=None``. Use the returned token to
+        fetch each subsequent page. When ``next_page_token`` is ``None`` there
+        are no more pages.
+
+        Args:
+            query: Query to be executed.
+            page_size: Number of rows per page.
+            page_token: Token for the page to fetch. Pass ``None`` for the first page.
+            timeout: Timeout in seconds. Default is 5 minutes.
+
+        Returns:
+            A tuple of (rows, next_page_token). ``next_page_token`` is ``None``
+            when there are no more pages.
+
+        """
+        if page_token is None:
+            job_config = bigquery.QueryJobConfig(use_legacy_sql=False)
+            query_job = self.client.query(query, job_config=job_config)
+            query_job.result(timeout=timeout)  # wait for completion
+            destination = query_job.destination
+            if destination is None:
+                raise RuntimeError("Query job has no destination table.")
+            bq_page_token = None
+        else:
+            token_data = json.loads(base64.b64decode(page_token))
+            destination = bigquery.TableReference.from_string(token_data["destination"])
+            bq_page_token = token_data["bq_page_token"]
+
+        rows_iter = self.client.list_rows(
+            destination, page_token=bq_page_token, page_size=page_size
+        )
+        page = next(rows_iter.pages)
+        rows = [dict(row) for row in page]
+
+        bq_next_token = rows_iter.next_page_token
+        next_token: str | None = None
+        if bq_next_token:
+            next_token_data = {
+                "destination": str(destination),
+                "bq_page_token": bq_next_token,
+            }
+            next_token = base64.b64encode(json.dumps(next_token_data).encode()).decode()
+
+        return rows, next_token
 
     def run_command(self, command_sql: str, timeout: int = FIVE_MINUTES) -> None:
         """Run a command on bigquery.
@@ -641,6 +697,39 @@ def select(
     records = client.query(query, timeout=timeout)
     logger.info(f"Query execution finished, {len(records)} records returned!")
     return records
+
+
+def select_paginated(
+    query: str,
+    page_size: int,
+    page_token: str | None = None,
+    timeout: int = FIVE_MINUTES,
+    json_key: dict[str, str] | None = None,
+    client: BigQueryClient | None = None,
+) -> PagedQueryResult:
+    """Run a select statement query and return a single page of results.
+
+    On the first call, pass ``page_token=None``. Use the returned token to
+    fetch each subsequent page. When ``next_page_token`` is ``None`` there
+    are no more pages.
+
+    Args:
+        query: select statement to run against BigQuery.
+        page_size: number of rows per page.
+        page_token: token for the page to fetch. Pass ``None`` to get the first page.
+        timeout: seconds to wait for the query to finish.
+        json_key: json key with gcp credentials.
+        client: client to connect to gcp.
+
+    Returns:
+        A tuple of (rows, next_page_token). ``next_page_token`` is ``None``
+        when there are no more pages.
+
+    """
+    client = client or BigQueryClient(json_key=json_key or {})
+    return client.query_paginated(
+        query, page_size=page_size, page_token=page_token, timeout=timeout
+    )
 
 
 def query_to_df(
