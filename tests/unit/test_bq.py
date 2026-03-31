@@ -63,6 +63,109 @@ class TestBigQueryClient:
         # assert
         bq_client.client.insert_rows_json.assert_called_once()
 
+    def test_query_paginated_first_page(self, bq_client: bq.BigQueryClient):
+        # arrange
+        query = "SELECT * FROM my_table"
+        query_job = Mock()
+        query_job.destination = TableReference.from_string(
+            "my_project.my_dataset.my_table"
+        )
+
+        page = Mock()
+        page.__iter__ = Mock(return_value=iter([{"col": "a"}, {"col": "b"}]))
+
+        rows_iter = Mock()
+        rows_iter.pages = iter([page])
+        rows_iter.next_page_token = "bq-token-1"
+
+        bq_client.client.query.return_value = query_job
+        bq_client.client.list_rows.return_value = rows_iter
+
+        # act
+        rows, next_token = bq_client.query_paginated(query, page_size=2)
+
+        # assert
+        bq_client.client.query.assert_called_once()
+        query_job.result.assert_called_once_with(timeout=bq.FIVE_MINUTES)
+        bq_client.client.list_rows.assert_called_once_with(
+            query_job.destination, page_token=None, page_size=2
+        )
+        assert next_token is not None
+
+    def test_query_paginated_last_page(self, bq_client: bq.BigQueryClient):
+        # arrange
+        query = "SELECT * FROM my_table"
+        query_job = Mock()
+        query_job.destination = TableReference.from_string(
+            "my_project.my_dataset.my_table"
+        )
+
+        page = Mock()
+        page.__iter__ = Mock(return_value=iter([]))
+
+        rows_iter = Mock()
+        rows_iter.pages = iter([page])
+        rows_iter.next_page_token = None
+
+        bq_client.client.query.return_value = query_job
+        bq_client.client.list_rows.return_value = rows_iter
+
+        # act
+        rows, next_token = bq_client.query_paginated(query, page_size=2)
+
+        # assert
+        bq_client.client.list_rows.assert_called_once_with(
+            query_job.destination, page_token=None, page_size=2
+        )
+        assert next_token is None
+
+    def test_query_paginated_with_token(self, bq_client: bq.BigQueryClient):
+        # arrange
+        import base64
+        import json
+
+        query = "SELECT * FROM my_table"
+        destination = "my_project.my_dataset.my_table"
+        bq_page_token = "bq-token-1"
+        page_token = base64.b64encode(
+            json.dumps(
+                {"destination": destination, "bq_page_token": bq_page_token}
+            ).encode()
+        ).decode()
+
+        page = Mock()
+        page.__iter__ = Mock(return_value=iter([]))
+
+        rows_iter = Mock()
+        rows_iter.pages = iter([page])
+        rows_iter.next_page_token = None
+
+        bq_client.client.list_rows.return_value = rows_iter
+
+        # act
+        rows, next_token = bq_client.query_paginated(
+            query, page_size=2, page_token=page_token
+        )
+
+        # assert
+        bq_client.client.query.assert_not_called()
+        bq_client.client.list_rows.assert_called_once_with(
+            TableReference.from_string(destination),
+            page_token=bq_page_token,
+            page_size=2,
+        )
+
+    def test_query_paginated_no_destination(self, bq_client: bq.BigQueryClient):
+        # arrange
+        query = "SELECT * FROM my_table"
+        query_job = Mock()
+        query_job.destination = None
+        bq_client.client.query.return_value = query_job
+
+        # act / assert
+        with pytest.raises(RuntimeError):
+            bq_client.query_paginated(query, page_size=10)
+
     def test_query(self, bq_client: bq.BigQueryClient):
         # assert
         query = "SELECT * FROM my_table"
@@ -216,6 +319,25 @@ def test_select():
 
     # assert
     assert output == target
+
+
+def test_select_paginated():
+    # arrange
+    mock_client = Mock(spec_set=bq.BigQueryClient)
+    rows = [{"col": "value"}]
+    mock_client.query_paginated.return_value = (rows, None)
+
+    # act
+    result_rows, next_token = bq.select_paginated(
+        query="select * from table", page_size=10, client=mock_client
+    )
+
+    # assert
+    mock_client.query_paginated.assert_called_once_with(
+        "select * from table", page_size=10, page_token=None, timeout=bq.FIVE_MINUTES
+    )
+    assert result_rows == rows
+    assert next_token is None
 
 
 def test_delete_not_exist():
