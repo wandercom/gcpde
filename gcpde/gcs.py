@@ -96,7 +96,7 @@ class _CredentialsToken:
             await loop.run_in_executor(
                 None,
                 self._credentials.refresh,
-                google.auth.transport.requests.Request(),  # type: ignore[no-untyped-call]
+                google.auth.transport.requests.Request(),
             )
         return self._credentials.token  # type: ignore[return-value]
 
@@ -229,7 +229,7 @@ def add_records_to_dataset(
     wait=tenacity.wait_exponential(max=5),
     stop=tenacity.stop_after_attempt(7),
     before_sleep=tenacity.before_sleep_log(
-        logger=logger,  # type: ignore[arg-type]
+        logger=logger,
         log_level=logging.WARNING,
     ),
 )

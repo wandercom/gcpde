@@ -323,7 +323,7 @@ def _create_schema_from_records(records: ListJsonType) -> BigQuerySchema:
     wait=tenacity.wait_exponential(min=1),
     stop=tenacity.stop_after_attempt(3),
     before_sleep=tenacity.before_sleep_log(
-        logger=logger,  # type: ignore[arg-type]
+        logger=logger,
         log_level=logging.WARNING,
     ),
 )
@@ -369,7 +369,7 @@ def create_table(
     wait=tenacity.wait_exponential(min=1),
     stop=tenacity.stop_after_attempt(10),
     before_sleep=tenacity.before_sleep_log(
-        logger=logger,  # type: ignore[arg-type]
+        logger=logger,
         log_level=logging.WARNING,
     ),
 )
