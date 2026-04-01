@@ -92,9 +92,9 @@ def read_sheet(
     document_id: str,
     sheet_name: str,
     json_key: Optional[dict[str, str]] = None,
-    credentials: Optional[GoogleCredentials] = None,
     head: int = 1,
     expected_headers: Optional[list[str]] = None,
+    credentials: Optional[GoogleCredentials] = None,
 ) -> list[dict[str, str | None]]:
     """Get all the data in a sheet from a document.
 
@@ -102,10 +102,10 @@ def read_sheet(
         document_id: id for the document (can be retrieved from the url).
         sheet_name: name of the sheet to read in the document.
         json_key: json key with gcp credentials.
-        credentials: google-auth credentials to connect to gcp.
         head: (optional) Determines which row to use as keys,
             starting from 1 following the numeration of the spreadsheet.
         expected_headers: (optional) List of expected headers, they must be unique.
+        credentials: google-auth credentials to connect to gcp.
 
     Returns:
         List of records as json dict.
@@ -131,16 +131,16 @@ def read_sheet(
 def read_sheets(
     document_id: str,
     json_key: Optional[dict[str, str]] = None,
-    credentials: Optional[GoogleCredentials] = None,
     sheet_names: list[str] | None = None,
+    credentials: Optional[GoogleCredentials] = None,
 ) -> dict[str, list[dict[str, str | None]]]:
     """Get all data from all sheets in a document.
 
     Args:
         document_id: id for the document (can be retrieved from the url).
         json_key: json key with gcp credentials.
-        credentials: google-auth credentials to connect to gcp.
         sheet_names: list of sheet names to read in the document.
+        credentials: google-auth credentials to connect to gcp.
 
     Returns:
         Dict with each key being the sheet_name and the values as a list of records as
