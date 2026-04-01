@@ -10,6 +10,7 @@ import pandas as pd
 import tenacity
 from bigquery_schema_generator.generate_schema import SchemaGenerator
 from google.api_core.exceptions import BadRequest, NotFound
+from google.auth.credentials import Credentials as GoogleCredentials
 from google.cloud import bigquery
 from google.cloud.exceptions import Conflict
 from google.oauth2.service_account import Credentials
@@ -31,7 +32,7 @@ class BigQueryClient:
     def __init__(
         self,
         json_key: dict[str, str] | None = None,
-        credentials: Credentials | None = None,
+        credentials: GoogleCredentials | None = None,
         client: bigquery.Client | None = None,
     ):
         self.client = client or bigquery.Client(
