@@ -15,7 +15,7 @@ def _open_document(
     json_key: Optional[dict[str, str]] = None,
     credentials: Optional[GoogleCredentials] = None,
 ) -> Spreadsheet:
-    if json_key is None and credentials is None:
+    if not json_key and credentials is None:
         raise ValueError(
             "You must provide either a json_key or credentials to connect to sheets."
         )
@@ -159,3 +159,4 @@ def read_sheets(
         )
         for sheet_name in sheet_names
     }
+

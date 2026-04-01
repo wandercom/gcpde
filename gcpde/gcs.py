@@ -352,7 +352,7 @@ def _check_auth_args(
     credentials: Optional[GoogleCredentials],
     client: Optional[object],
 ) -> None:
-    if json_key is None and credentials is None and client is None:
+    if not json_key and credentials is None and client is None:
         raise ValueError(
             "You must provide either a json_key, credentials, "
             "or a client to connect to gcs."

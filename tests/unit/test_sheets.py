@@ -5,16 +5,18 @@ from gcpde import sheets
 MockWorksheet = mock.Mock("gspread.worksheet.Worksheet", autospec=True)
 MockSpreadsheet = mock.Mock("gspread.spreadsheet.Spreadsheet", autospec=True)
 
+MOCK_JSON_KEY = {"type": "service_account"}
+
 
 @mock.patch("gspread.service_account_from_dict", autospec=True)
 def test__open_sheet(mock_service_account_from_dict: mock.Mock):
     # act
     _ = sheets._open_sheet(
-        sheet_name="sheet_name", document_id="document_id", json_key={}
+        sheet_name="sheet_name", document_id="document_id", json_key=MOCK_JSON_KEY
     )
 
     # assert
-    mock_service_account_from_dict.assert_called_once_with({})
+    mock_service_account_from_dict.assert_called_once_with(MOCK_JSON_KEY)
 
 
 @mock.patch("gcpde.sheets._open_sheet", autospec=True)
@@ -29,7 +31,7 @@ def test_replace_from_records(mock_open_sheet: mock.Mock):
         sheet_name="sheet_name",
         records=[{"col": "value"}],
         columns=["col"],
-        json_key={},
+        json_key=MOCK_JSON_KEY,
     )
 
     # assert
@@ -56,7 +58,7 @@ def test_read_sheets(mock_open_document: mock.Mock):
     # act
     output = sheets.read_sheets(
         document_id="document_id",
-        json_key={},
+        json_key=MOCK_JSON_KEY,
     )
 
     # assert
