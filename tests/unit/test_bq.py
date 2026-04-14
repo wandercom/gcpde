@@ -512,8 +512,8 @@ def test_upsert_table_from_records_schema_mismatch(mock_delete_table):
     temp_table_mock = Mock()
     table_mock.schema = [{"name": "uuid", "type": "STRING", "mode": "NULLABLE"}]
     temp_table_mock.schema = [{"name": "id", "type": "INTEGER", "mode": "NULLABLE"}]
-    mock_client.get_table = (
-        lambda dataset, table: table_mock if table == "table" else temp_table_mock
+    mock_client.get_table = lambda dataset, table: (
+        table_mock if table == "table" else temp_table_mock
     )
 
     schema_json = [{"name": "uuid", "type": "STRING", "mode": "NULLABLE"}]
