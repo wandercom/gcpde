@@ -4,10 +4,17 @@ from typing import Optional
 
 import gspread
 from google.auth.credentials import Credentials as GoogleCredentials
+from google.auth.credentials import Scoped
 from gspread import Spreadsheet, Worksheet
 from loguru import logger
 
 from gcpde.types import ListJsonType
+
+_SHEETS_SCOPES = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
 
 
 def _open_document(
@@ -19,11 +26,32 @@ def _open_document(
         raise ValueError(
             "You must provide either a json_key or credentials to connect to sheets."
         )
-    gc = (
-        gspread.authorize(credentials)
-        if credentials
-        else gspread.service_account_from_dict(json_key)  # type: ignore[arg-type]
-    )
+    if credentials is not None:
+        needs_scopes = isinstance(credentials, Scoped) and not (
+            credentials.scopes
+            and set(credentials.scopes)
+            & {
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://spreadsheets.google.com/feeds",
+            }
+        )
+        if needs_scopes:
+            assert isinstance(credentials, Scoped)
+            _creds: GoogleCredentials = credentials.with_scopes(  # type: ignore[no-untyped-call]
+                _SHEETS_SCOPES
+            )
+        elif not isinstance(credentials, Scoped):
+            logger.warning(
+                "Credentials do not support scoping. Ensure they were obtained with "
+                "the required Google Sheets scopes: "
+                "https://www.googleapis.com/auth/spreadsheets"
+            )
+            _creds = credentials
+        else:
+            _creds = credentials
+        gc = gspread.authorize(_creds)
+    else:
+        gc = gspread.service_account_from_dict(json_key)  # type: ignore[arg-type]
     return gc.open_by_key(document_id)
 
 
@@ -159,4 +187,3 @@ def read_sheets(
         )
         for sheet_name in sheet_names
     }
-
