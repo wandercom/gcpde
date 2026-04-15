@@ -302,7 +302,7 @@ def test_list_files(mock__async_list_files: mock.AsyncMock):
 @pytest.mark.asyncio
 @mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
 async def test__async_list_files_recursive(mock_client: mock.Mock):
-    """Default recursive=True should NOT send a delimiter param."""
+    """recursive=True should NOT send a delimiter param."""
     mock_client.list_objects.return_value = {
         "items": [
             {"name": "prefix/a/file1.jsonl"},
@@ -314,6 +314,7 @@ async def test__async_list_files_recursive(mock_client: mock.Mock):
         bucket_name="my-bucket",
         prefix="prefix/",
         client=mock_client,
+        recursive=True,
     )
 
     assert output == ["prefix/a/file1.jsonl", "prefix/b/file2.jsonl"]

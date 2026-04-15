@@ -379,7 +379,7 @@ async def _async_list_files(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
-    recursive: bool = True,
+    recursive: bool = False,
 ) -> List[str]:
     extra_api_params = api_params or {}
     items = []
@@ -430,7 +430,7 @@ async def _async_list_files_handling_auth(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
-    recursive: bool = True,
+    recursive: bool = False,
 ) -> List[str]:
     _check_auth_args(json_key=json_key, credentials=credentials, client=client)
     session_timeout = ClientTimeout(total=None, sock_connect=timeout, sock_read=timeout)
@@ -459,7 +459,7 @@ def list_files(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
-    recursive: bool = True,
+    recursive: bool = False,
 ) -> List[str]:
     """List files on gcs from a given prefix.
 
@@ -473,8 +473,8 @@ def list_files(
         api_params: parameters for the API request (ref. https://cloud.google.com/storage/docs/json_api/v1/objects/list).
         updated_after: filter files updated after this datetime.
         updated_before: filter files updated before this datetime.
-        recursive: if True (default), list all objects under the prefix
-            recursively. If False, use delimiter='/' for a shallow
+        recursive: if True, list all objects under the prefix recursively.
+            If False (default), use delimiter='/' for a shallow
             single-level listing.
     """
     logger.info(f"Listing files from {prefix} on {bucket_name} bucket...")
