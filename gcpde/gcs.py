@@ -379,12 +379,15 @@ async def _async_list_files(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
+    recursive: bool = True,
 ) -> List[str]:
     extra_api_params = api_params or {}
     items = []
     next_page_token = None
     while True:
-        params = {"prefix": prefix, "delimiter": "/", **extra_api_params}
+        params: dict[str, Any] = {"prefix": prefix, **extra_api_params}
+        if not recursive:
+            params.setdefault("delimiter", "/")
         if next_page_token:
             params["pageToken"] = next_page_token
 
@@ -392,7 +395,7 @@ async def _async_list_files(
             bucket=bucket_name,
             params=params,
         )
-        items.extend(search_result["items"])
+        items.extend(search_result.get("items", []))
         next_page_token = search_result.get("nextPageToken")
 
         if not next_page_token:
@@ -427,6 +430,7 @@ async def _async_list_files_handling_auth(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
+    recursive: bool = True,
 ) -> List[str]:
     _check_auth_args(json_key=json_key, credentials=credentials, client=client)
     session_timeout = ClientTimeout(total=None, sock_connect=timeout, sock_read=timeout)
@@ -441,6 +445,7 @@ async def _async_list_files_handling_auth(
             api_params=api_params,
             updated_after=updated_after,
             updated_before=updated_before,
+            recursive=recursive,
         )
 
 
@@ -454,6 +459,7 @@ def list_files(
     api_params: Optional[Dict[str, Any]] = None,
     updated_after: Optional[datetime] = None,
     updated_before: Optional[datetime] = None,
+    recursive: bool = True,
 ) -> List[str]:
     """List files on gcs from a given prefix.
 
@@ -467,6 +473,9 @@ def list_files(
         api_params: parameters for the API request (ref. https://cloud.google.com/storage/docs/json_api/v1/objects/list).
         updated_after: filter files updated after this datetime.
         updated_before: filter files updated before this datetime.
+        recursive: if True (default), list all objects under the prefix
+            recursively. If False, use delimiter='/' for a shallow
+            single-level listing.
     """
     logger.info(f"Listing files from {prefix} on {bucket_name} bucket...")
     file_paths = asyncio.run(
@@ -480,6 +489,7 @@ def list_files(
             api_params=api_params,
             updated_after=updated_after,
             updated_before=updated_before,
+            recursive=recursive,
         )
     )
     logger.info(f"{len(file_paths)} files found.")

@@ -299,6 +299,69 @@ def test_list_files(mock__async_list_files: mock.AsyncMock):
     ]
 
 
+@pytest.mark.asyncio
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+async def test__async_list_files_recursive(mock_client: mock.Mock):
+    """Default recursive=True should NOT send a delimiter param."""
+    mock_client.list_objects.return_value = {
+        "items": [
+            {"name": "prefix/a/file1.jsonl"},
+            {"name": "prefix/b/file2.jsonl"},
+        ]
+    }
+
+    output = await gcs._async_list_files(
+        bucket_name="my-bucket",
+        prefix="prefix/",
+        client=mock_client,
+    )
+
+    assert output == ["prefix/a/file1.jsonl", "prefix/b/file2.jsonl"]
+    called_params = mock_client.list_objects.call_args.kwargs["params"]
+    assert "delimiter" not in called_params
+
+
+@pytest.mark.asyncio
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+async def test__async_list_files_shallow(mock_client: mock.Mock):
+    """recursive=False should set delimiter='/' for a shallow listing."""
+    mock_client.list_objects.return_value = {
+        "items": [
+            {"name": "prefix/file_at_root.jsonl"},
+        ],
+        "prefixes": ["prefix/subdir/"],
+    }
+
+    output = await gcs._async_list_files(
+        bucket_name="my-bucket",
+        prefix="prefix/",
+        client=mock_client,
+        recursive=False,
+    )
+
+    assert output == ["prefix/file_at_root.jsonl"]
+    called_params = mock_client.list_objects.call_args.kwargs["params"]
+    assert called_params["delimiter"] == "/"
+
+
+@pytest.mark.asyncio
+@mock.patch("gcpde.gcs.AsyncStorageClient", autospec=True)
+async def test__async_list_files_shallow_prefixes_only(mock_client: mock.Mock):
+    """Shallow listing where the response has only prefixes and no 'items' key."""
+    mock_client.list_objects.return_value = {
+        "prefixes": ["prefix/subdir_a/", "prefix/subdir_b/"],
+    }
+
+    output = await gcs._async_list_files(
+        bucket_name="my-bucket",
+        prefix="prefix/",
+        client=mock_client,
+        recursive=False,
+    )
+
+    assert output == []
+
+
 def test__check_auth_args_exception():
     # arrange
     json_key = None
