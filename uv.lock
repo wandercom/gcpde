@@ -9,7 +9,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-07T01:02:13.179777748Z"
+exclude-newer = "2026-04-08T19:08:27.248874203Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -673,7 +673,7 @@ wheels = [
 
 [[package]]
 name = "gcpde"
-version = "0.12.1"
+version = "0.12.2"
 source = { editable = "." }
 dependencies = [
     { name = "bigquery-schema-generator" },
