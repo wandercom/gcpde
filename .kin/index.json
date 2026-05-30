@@ -1,0 +1,144 @@
+{
+  "domains": [
+    "code",
+    "python"
+  ],
+  "node_count": 12,
+  "nodes": [
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-mod-gcpde-3570eda60ec1",
+      "title": "gcpde/gcs.py",
+      "type": "artifact",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-mod-gcpde-62f047bea506",
+      "title": "gcpde/base.py",
+      "type": "artifact",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-mod-gcpde-672c10164972",
+      "title": "gcpde/types.py",
+      "type": "artifact",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-mod-gcpde-69f6a9b7087a",
+      "title": "gcpde/sheets.py",
+      "type": "artifact",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-mod-gcpde-6e26ab0af1f3",
+      "title": "gcpde/bq.py",
+      "type": "artifact",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-1e8ae2608ffc",
+      "title": "BigQuerySchemaMismatchException",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-38807bca64e5",
+      "title": "BigQueryClientException",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-3bae1c7ff39c",
+      "title": "GCSDownloadedFile",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-8250ce12a046",
+      "title": "BigQueryClient",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-927676d0db65",
+      "title": "DateTimePartitions",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-bb31c7cd5ff8",
+      "title": "BuildFileNameProtocol",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    },
+    {
+      "domains": [
+        "code",
+        "python"
+      ],
+      "id": "code-sym-gcpde-dfeff2fff8bd",
+      "title": "GCSHMACKeyConfig",
+      "type": "concept",
+      "updated_at": "2026-05-30T14:52:09",
+      "weight": 0.5
+    }
+  ],
+  "repo": "gcpde",
+  "source_updated_at": "2026-05-30T14:52:09",
+  "version": 1
+}
