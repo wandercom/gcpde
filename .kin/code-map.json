@@ -1,0 +1,326 @@
+{
+  "edges": [
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-1e8ae2608ffc",
+      "target": "code-mod-gcpde-6e26ab0af1f3",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-38807bca64e5",
+      "target": "code-mod-gcpde-6e26ab0af1f3",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-3bae1c7ff39c",
+      "target": "code-mod-gcpde-3570eda60ec1",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-8250ce12a046",
+      "target": "code-mod-gcpde-6e26ab0af1f3",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-927676d0db65",
+      "target": "code-mod-gcpde-3570eda60ec1",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-bb31c7cd5ff8",
+      "target": "code-mod-gcpde-3570eda60ec1",
+      "type": "contains",
+      "weight": 0.6
+    },
+    {
+      "direction": "outbound",
+      "source": "code-sym-gcpde-dfeff2fff8bd",
+      "target": "code-mod-gcpde-3570eda60ec1",
+      "type": "contains",
+      "weight": 0.6
+    }
+  ],
+  "layers": [
+    {
+      "description": "Kindex-inferred core layer.",
+      "id": "core",
+      "name": "Core",
+      "nodeIds": [
+        "code-mod-gcpde-3570eda60ec1",
+        "code-mod-gcpde-62f047bea506",
+        "code-mod-gcpde-672c10164972",
+        "code-mod-gcpde-69f6a9b7087a",
+        "code-mod-gcpde-6e26ab0af1f3"
+      ]
+    },
+    {
+      "description": "Kindex-inferred domain layer.",
+      "id": "domain",
+      "name": "Domain",
+      "nodeIds": [
+        "code-sym-gcpde-1e8ae2608ffc",
+        "code-sym-gcpde-38807bca64e5",
+        "code-sym-gcpde-3bae1c7ff39c",
+        "code-sym-gcpde-8250ce12a046",
+        "code-sym-gcpde-927676d0db65",
+        "code-sym-gcpde-bb31c7cd5ff8",
+        "code-sym-gcpde-dfeff2fff8bd"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "complexity": 1,
+      "filePath": "gcpde/base.py",
+      "id": "code-mod-gcpde-62f047bea506",
+      "languageNotes": {
+        "kindexType": "artifact",
+        "language": "Python",
+        "toolTier": "C"
+      },
+      "name": "gcpde/base.py",
+      "summary": "Language: Python | Path: gcpde/base.py | ~6 lines ## Functions - get_utc_now() -> datetime.datetime",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "file"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/bq.py",
+      "id": "code-sym-gcpde-1e8ae2608ffc",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "BigQuerySchemaMismatchException",
+      "summary": "class BigQuerySchemaMismatchException(Exception) (gcpde/bq.py:241) ## Methods - __str__(self) -> str",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/bq.py",
+      "id": "code-sym-gcpde-38807bca64e5",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "BigQueryClientException",
+      "summary": "class BigQueryClientException(Exception) (gcpde/bq.py:237)",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 8,
+      "filePath": "gcpde/bq.py",
+      "id": "code-sym-gcpde-8250ce12a046",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "BigQueryClient",
+      "summary": "class BigQueryClient (gcpde/bq.py:24) ## Methods - check_table(self, dataset: str, table: str) -> bool",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 17,
+      "filePath": "gcpde/bq.py",
+      "id": "code-mod-gcpde-6e26ab0af1f3",
+      "languageNotes": {
+        "kindexType": "artifact",
+        "language": "Python",
+        "toolTier": "C"
+      },
+      "name": "gcpde/bq.py",
+      "summary": "Language: Python | Path: gcpde/bq.py | ~736 lines ## Classes - BigQueryClient",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "file"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/gcs.py",
+      "id": "code-sym-gcpde-3bae1c7ff39c",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "GCSDownloadedFile",
+      "summary": "class GCSDownloadedFile(BaseModel) (gcpde/gcs.py:24)",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/gcs.py",
+      "id": "code-sym-gcpde-927676d0db65",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "DateTimePartitions",
+      "summary": "class DateTimePartitions(BaseModel) (gcpde/gcs.py:42) ## Methods - __str__(self) -> str",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/gcs.py",
+      "id": "code-sym-gcpde-bb31c7cd5ff8",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "BuildFileNameProtocol",
+      "summary": "class BuildFileNameProtocol(Protocol) (gcpde/gcs.py:70) ## Methods - __call__(self, *args: Any, **kwargs: Any) -> str",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/gcs.py",
+      "id": "code-sym-gcpde-dfeff2fff8bd",
+      "languageNotes": {
+        "kindexType": "concept",
+        "language": "Python",
+        "toolTier": ""
+      },
+      "name": "GCSHMACKeyConfig",
+      "summary": "class GCSHMACKeyConfig(BaseModel) (gcpde/gcs.py:31)",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "class"
+    },
+    {
+      "complexity": 27,
+      "filePath": "gcpde/gcs.py",
+      "id": "code-mod-gcpde-3570eda60ec1",
+      "languageNotes": {
+        "kindexType": "artifact",
+        "language": "Python",
+        "toolTier": "C"
+      },
+      "name": "gcpde/gcs.py",
+      "summary": "Language: Python | Path: gcpde/gcs.py | ~600 lines ## Classes - BuildFileNameProtocol(Protocol)",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "file"
+    },
+    {
+      "complexity": 6,
+      "filePath": "gcpde/sheets.py",
+      "id": "code-mod-gcpde-69f6a9b7087a",
+      "languageNotes": {
+        "kindexType": "artifact",
+        "language": "Python",
+        "toolTier": "C"
+      },
+      "name": "gcpde/sheets.py",
+      "summary": "Language: Python | Path: gcpde/sheets.py | ~159 lines ## Functions - read_sheet( document_id: str, sheet_name: str, json_key: Optional[dict[str, str]] = None, head: int = 1, expected_headers: Optional[list[str]] = None, credentials: Optional[GoogleCredentials] = None, ) -> list[dict[str,str|None]]",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "file"
+    },
+    {
+      "complexity": 1,
+      "filePath": "gcpde/types.py",
+      "id": "code-mod-gcpde-672c10164972",
+      "languageNotes": {
+        "kindexType": "artifact",
+        "language": "Python",
+        "toolTier": "C"
+      },
+      "name": "gcpde/types.py",
+      "summary": "Language: Python | Path: gcpde/types.py | ~11 lines",
+      "tags": [
+        "code",
+        "python"
+      ],
+      "type": "file"
+    }
+  ],
+  "project": {
+    "analyzedAt": "2026-04-15T19:08:30Z",
+    "description": "Code map exported from Kindex for gcpde.",
+    "frameworks": [],
+    "gitCommitHash": "a1805787cbaf728e9ff9676e429880c82e5dd0ea",
+    "languages": [
+      "Python"
+    ],
+    "name": "gcpde"
+  },
+  "tour": [
+    {
+      "description": "Review 5 node(s) in the Core layer.",
+      "nodeIds": [
+        "code-mod-gcpde-3570eda60ec1",
+        "code-mod-gcpde-62f047bea506",
+        "code-mod-gcpde-672c10164972",
+        "code-mod-gcpde-69f6a9b7087a",
+        "code-mod-gcpde-6e26ab0af1f3"
+      ],
+      "order": 1,
+      "title": "Core"
+    },
+    {
+      "description": "Review 7 node(s) in the Domain layer.",
+      "nodeIds": [
+        "code-sym-gcpde-1e8ae2608ffc",
+        "code-sym-gcpde-38807bca64e5",
+        "code-sym-gcpde-3bae1c7ff39c",
+        "code-sym-gcpde-8250ce12a046",
+        "code-sym-gcpde-927676d0db65",
+        "code-sym-gcpde-bb31c7cd5ff8",
+        "code-sym-gcpde-dfeff2fff8bd"
+      ],
+      "order": 2,
+      "title": "Domain"
+    }
+  ],
+  "version": "1.0.0"
+}
