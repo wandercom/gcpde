@@ -6,6 +6,7 @@ import gspread
 from google.auth.credentials import Credentials as GoogleCredentials
 from google.auth.credentials import Scoped
 from gspread import Spreadsheet, Worksheet
+from gspread.exceptions import WorksheetNotFound
 from loguru import logger
 
 from gcpde.types import ListJsonType
@@ -114,6 +115,102 @@ def replace_from_records(
     records_as_row = [[r[c] for c in columns] for r in records]
     sheet.update(values=[columns] + records_as_row, range_name="A1")
     logger.info("Document update finished!")
+
+
+def replace_or_create_from_records(
+    document_id: str,
+    sheet_name: str,
+    records: ListJsonType,
+    columns: list[str],
+    min_rows: int = 100,
+    json_key: dict[str, str] | None = None,
+    credentials: GoogleCredentials | None = None,
+) -> Worksheet:
+    """Replace worksheet content, creating and resizing the worksheet as needed.
+
+    Args:
+        document_id: ID for the document (can be retrieved from the URL).
+        sheet_name: Name of the worksheet to replace or create.
+        records: Records to write to the worksheet.
+        columns: Column names and order to use when writing records.
+        min_rows: Minimum number of rows the worksheet should contain.
+        json_key: JSON key with GCP credentials.
+        credentials: Google-auth credentials to connect to GCP.
+
+    Returns:
+        The created or updated worksheet.
+    """
+    logger.info(f"Document '{document_id}' update started ...")
+    spreadsheet = _open_document(
+        document_id=document_id, json_key=json_key, credentials=credentials
+    )
+    required_rows = len(records) + 1
+
+    try:
+        worksheet = spreadsheet.worksheet(sheet_name)
+    except WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(
+            title=sheet_name,
+            rows=max(min_rows, required_rows),
+            cols=len(columns),
+        )
+    else:
+        worksheet.resize(
+            rows=max(worksheet.row_count, min_rows, required_rows),
+            cols=max(worksheet.col_count, len(columns)),
+        )
+    worksheet.clear()
+    worksheet.update(
+        values=[columns]
+        + [[record[column] for column in columns] for record in records],
+        range_name="A1",
+    )
+    logger.info("Document update finished!")
+    return worksheet
+
+
+def list_worksheets(
+    document_id: str,
+    json_key: dict[str, str] | None = None,
+    credentials: GoogleCredentials | None = None,
+) -> list[Worksheet]:
+    """List all worksheets in a Google Sheets document.
+
+    Args:
+        document_id: ID for the document (can be retrieved from the URL).
+        json_key: JSON key with GCP credentials.
+        credentials: Google-auth credentials to connect to GCP.
+
+    Returns:
+        All worksheets in the document.
+    """
+    spreadsheet = _open_document(
+        document_id=document_id, json_key=json_key, credentials=credentials
+    )
+    return spreadsheet.worksheets()
+
+
+def delete_worksheet(
+    document_id: str,
+    sheet_name: str,
+    json_key: dict[str, str] | None = None,
+    credentials: GoogleCredentials | None = None,
+) -> None:
+    """Delete a worksheet from a Google Sheets document.
+
+    Args:
+        document_id: ID for the document (can be retrieved from the URL).
+        sheet_name: Name of the worksheet to delete.
+        json_key: JSON key with GCP credentials.
+        credentials: Google-auth credentials to connect to GCP.
+
+    Raises:
+        gspread.exceptions.WorksheetNotFound: If the worksheet does not exist.
+    """
+    spreadsheet = _open_document(
+        document_id=document_id, json_key=json_key, credentials=credentials
+    )
+    spreadsheet.del_worksheet(spreadsheet.worksheet(sheet_name))
 
 
 def read_sheet(

@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 from google.auth.credentials import Scoped
+from gspread.exceptions import WorksheetNotFound
 
 from gcpde import sheets
 
@@ -9,6 +10,14 @@ MockWorksheet = mock.Mock("gspread.worksheet.Worksheet", autospec=True)
 MockSpreadsheet = mock.Mock("gspread.spreadsheet.Spreadsheet", autospec=True)
 
 MOCK_JSON_KEY = {"type": "service_account"}
+
+
+def _mock_spreadsheet() -> mock.Mock:
+    return mock.create_autospec(sheets.Spreadsheet, instance=True)
+
+
+def _mock_worksheet() -> mock.Mock:
+    return mock.create_autospec(sheets.Worksheet, instance=True)
 
 
 @mock.patch("gspread.service_account_from_dict", autospec=True)
@@ -88,6 +97,87 @@ def test_replace_from_records(mock_open_sheet: mock.Mock):
     kwargs = mock_worksheet.update.call_args.kwargs
     assert list(kwargs["values"]) == [["col"], ["value"]]
     assert kwargs["range_name"] == "A1"
+
+
+@mock.patch("gcpde.sheets._open_document", autospec=True)
+def test_replace_or_create_from_records_creates_missing_worksheet(
+    mock_open_document: mock.Mock,
+):
+    # arrange
+    mock_spreadsheet = _mock_spreadsheet()
+    mock_open_document.return_value = mock_spreadsheet
+    mock_spreadsheet.worksheet.side_effect = WorksheetNotFound
+    mock_worksheet = _mock_worksheet()
+    mock_worksheet.row_count = 100
+    mock_worksheet.col_count = 2
+    mock_worksheet.url = (
+        "https://docs.google.com/spreadsheets/d/document_id/edit#gid=123"
+    )
+    mock_spreadsheet.add_worksheet.return_value = mock_worksheet
+
+    # act
+    result = sheets.replace_or_create_from_records(
+        document_id="document_id",
+        sheet_name="2026-07-20",
+        records=[{"date": "2026-07-20", "count": 1}],
+        columns=["date", "count"],
+        min_rows=10,
+        json_key=MOCK_JSON_KEY,
+    )
+
+    # assert
+    mock_spreadsheet.add_worksheet.assert_called_once_with(
+        title="2026-07-20", rows=10, cols=2
+    )
+    mock_worksheet.resize.assert_not_called()
+    mock_worksheet.clear.assert_called_once()
+    assert mock_worksheet.update.call_args.kwargs == {
+        "values": [["date", "count"], ["2026-07-20", 1]],
+        "range_name": "A1",
+    }
+    assert result is mock_worksheet
+    assert result.url.endswith("#gid=123")
+
+
+@mock.patch("gcpde.sheets._open_document", autospec=True)
+def test_list_worksheets_uses_authenticated_document(mock_open_document: mock.Mock):
+    # arrange
+    mock_spreadsheet = _mock_spreadsheet()
+    mock_open_document.return_value = mock_spreadsheet
+    worksheets = [_mock_worksheet(), _mock_worksheet()]
+    mock_spreadsheet.worksheets.return_value = worksheets
+    credentials = mock.MagicMock(spec=Scoped)
+
+    # act
+    result = sheets.list_worksheets(document_id="document_id", credentials=credentials)
+
+    # assert
+    mock_open_document.assert_called_once_with(
+        document_id="document_id", json_key=None, credentials=credentials
+    )
+    assert result == worksheets
+
+
+@mock.patch("gcpde.sheets._open_document", autospec=True)
+def test_delete_worksheet_uses_authenticated_document(mock_open_document: mock.Mock):
+    # arrange
+    mock_spreadsheet = _mock_spreadsheet()
+    mock_open_document.return_value = mock_spreadsheet
+    worksheet = _mock_worksheet()
+    mock_spreadsheet.worksheet.return_value = worksheet
+
+    # act
+    sheets.delete_worksheet(
+        document_id="document_id",
+        sheet_name="sheet_name",
+        json_key=MOCK_JSON_KEY,
+    )
+
+    # assert
+    mock_open_document.assert_called_once_with(
+        document_id="document_id", json_key=MOCK_JSON_KEY, credentials=None
+    )
+    mock_spreadsheet.del_worksheet.assert_called_once_with(worksheet)
 
 
 @mock.patch("gcpde.sheets._open_sheet", autospec=True)
