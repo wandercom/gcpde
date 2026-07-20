@@ -129,7 +129,7 @@ def test_replace_or_create_from_records_creates_missing_worksheet(
     mock_spreadsheet.add_worksheet.assert_called_once_with(
         title="2026-07-20", rows=10, cols=2
     )
-    mock_worksheet.resize.assert_called_once_with(rows=100, cols=2)
+    mock_worksheet.resize.assert_not_called()
     mock_worksheet.clear.assert_called_once()
     assert mock_worksheet.update.call_args.kwargs == {
         "values": [["date", "count"], ["2026-07-20", 1]],

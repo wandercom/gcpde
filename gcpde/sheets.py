@@ -1,6 +1,6 @@
 """Google Sheets client."""
 
-from typing import Any, Optional
+from typing import Optional
 
 import gspread
 from google.auth.credentials import Credentials as GoogleCredentials
@@ -120,7 +120,7 @@ def replace_from_records(
 def replace_or_create_from_records(
     document_id: str,
     sheet_name: str,
-    records: list[dict[str, Any]],
+    records: ListJsonType,
     columns: list[str],
     min_rows: int = 100,
     json_key: dict[str, str] | None = None,
@@ -154,11 +154,11 @@ def replace_or_create_from_records(
             rows=max(min_rows, required_rows),
             cols=len(columns),
         )
-
-    worksheet.resize(
-        rows=max(worksheet.row_count, min_rows, required_rows),
-        cols=max(worksheet.col_count, len(columns)),
-    )
+    else:
+        worksheet.resize(
+            rows=max(worksheet.row_count, min_rows, required_rows),
+            cols=max(worksheet.col_count, len(columns)),
+        )
     worksheet.clear()
     worksheet.update(
         values=[columns]
