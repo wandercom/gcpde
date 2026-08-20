@@ -1,8 +1,10 @@
 from unittest import mock
 
 import pytest
+import tenacity
 from google.auth.credentials import Scoped
-from gspread.exceptions import WorksheetNotFound
+from gspread.exceptions import APIError, WorksheetNotFound
+from requests import Response
 
 from gcpde import sheets
 
@@ -217,3 +219,80 @@ def test_read_sheets(mock_open_document: mock.Mock):
 
     # assert
     assert output == {"sheet": [{"key": "123"}]}
+
+
+def _api_error(status_code: int) -> APIError:
+    response = mock.Mock(spec=Response)
+    response.status_code = status_code
+    response.json.return_value = {"error": {"code": status_code, "message": "boom"}}
+    response.text = "boom"
+    return APIError(response)
+
+
+@pytest.mark.parametrize("status_code", [408, 429, 500, 502, 503, 504])
+def test__is_transient_api_error_true_for_retryable_status(status_code: int):
+    assert sheets._is_transient_api_error(_api_error(status_code)) is True
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404])
+def test__is_transient_api_error_false_for_client_errors(status_code: int):
+    assert sheets._is_transient_api_error(_api_error(status_code)) is False
+
+
+def test__is_transient_api_error_false_for_other_exceptions():
+    assert sheets._is_transient_api_error(ValueError("nope")) is False
+
+
+def test__call_api_retries_transient_error_then_succeeds():
+    # arrange
+    operation = mock.Mock(side_effect=[_api_error(503), "records"])
+    call_api = sheets._call_api.retry_with(wait=tenacity.wait_none())
+
+    # act
+    result = call_api(operation)
+
+    # assert
+    assert result == "records"
+    assert operation.call_count == 2
+
+
+def test__call_api_reraises_after_exhausting_attempts():
+    # arrange
+    operation = mock.Mock(side_effect=_api_error(503))
+    call_api = sheets._call_api.retry_with(wait=tenacity.wait_none())
+
+    # act / assert
+    with pytest.raises(APIError):
+        call_api(operation)
+    assert operation.call_count == 5
+
+
+def test__call_api_does_not_retry_client_errors():
+    # arrange
+    operation = mock.Mock(side_effect=_api_error(404))
+    call_api = sheets._call_api.retry_with(wait=tenacity.wait_none())
+
+    # act / assert
+    with pytest.raises(APIError):
+        call_api(operation)
+    assert operation.call_count == 1
+
+
+@mock.patch("gspread.service_account_from_dict", autospec=True)
+def test__open_document_retries_transient_error(
+    mock_service_account_from_dict: mock.Mock,
+):
+    # arrange
+    mock_client = mock_service_account_from_dict.return_value
+    spreadsheet = _mock_spreadsheet()
+    mock_client.open_by_key.side_effect = [_api_error(503), spreadsheet]
+
+    # act
+    with mock.patch.object(sheets._call_api.retry, "wait", tenacity.wait_none()):
+        result = sheets._open_document(
+            document_id="document_id", json_key=MOCK_JSON_KEY
+        )
+
+    # assert
+    assert result is spreadsheet
+    assert mock_client.open_by_key.call_count == 2
