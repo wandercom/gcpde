@@ -1,12 +1,14 @@
 """Google Sheets client."""
 
-from typing import Optional
+import logging
+from typing import Callable, Optional, TypeVar
 
 import gspread
+import tenacity
 from google.auth.credentials import Credentials as GoogleCredentials
 from google.auth.credentials import Scoped
 from gspread import Spreadsheet, Worksheet
-from gspread.exceptions import WorksheetNotFound
+from gspread.exceptions import APIError, WorksheetNotFound
 from loguru import logger
 
 from gcpde.types import ListJsonType
@@ -16,6 +18,51 @@ _SHEETS_SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
+
+_TRANSIENT_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
+
+_T = TypeVar("_T")
+
+
+def _is_transient_api_error(exception: BaseException) -> bool:
+    """Tell whether a gspread error is worth retrying.
+
+    Args:
+        exception: exception raised by a gspread call.
+
+    Returns:
+        True for rate limiting and server-side errors, False otherwise. Client
+        errors such as 401/403/404 are deterministic and are never retried.
+    """
+    if not isinstance(exception, APIError):
+        return False
+    status_code = getattr(exception.response, "status_code", None)
+    return status_code in _TRANSIENT_STATUS_CODES
+
+
+@tenacity.retry(
+    retry=tenacity.retry_if_exception(_is_transient_api_error),
+    wait=tenacity.wait_exponential(min=1, max=30),
+    stop=tenacity.stop_after_attempt(5),
+    reraise=True,
+    before_sleep=tenacity.before_sleep_log(
+        logger=logger,
+        log_level=logging.WARNING,
+    ),
+)
+def _call_api(operation: Callable[[], _T]) -> _T:
+    """Run a single Google Sheets API call, retrying transient failures.
+
+    Wrap only leaf calls with this: nesting two retried calls multiplies the
+    number of attempts.
+
+    Args:
+        operation: zero-argument callable performing one API round trip.
+
+    Returns:
+        Whatever the operation returns.
+    """
+    return operation()
 
 
 def _open_document(
@@ -53,7 +100,7 @@ def _open_document(
         gc = gspread.authorize(_creds)
     else:
         gc = gspread.service_account_from_dict(json_key)  # type: ignore[arg-type]
-    return gc.open_by_key(document_id)
+    return _call_api(lambda: gc.open_by_key(document_id))
 
 
 def _open_sheet(
@@ -66,7 +113,7 @@ def _open_sheet(
     spreadsheet = _open_document(
         document_id=document_id, json_key=json_key, credentials=credentials
     )
-    worksheet: Worksheet = spreadsheet.worksheet(sheet_name)
+    worksheet: Worksheet = _call_api(lambda: spreadsheet.worksheet(sheet_name))
     return worksheet
 
 
@@ -75,12 +122,10 @@ def _get_worksheets(
     json_key: Optional[dict[str, str]] = None,
     credentials: Optional[GoogleCredentials] = None,
 ) -> list[str]:
-    return [
-        ws.title
-        for ws in _open_document(
-            document_id=document_id, json_key=json_key, credentials=credentials
-        ).worksheets()
-    ]
+    spreadsheet = _open_document(
+        document_id=document_id, json_key=json_key, credentials=credentials
+    )
+    return [ws.title for ws in _call_api(spreadsheet.worksheets)]
 
 
 def replace_from_records(
@@ -187,7 +232,7 @@ def list_worksheets(
     spreadsheet = _open_document(
         document_id=document_id, json_key=json_key, credentials=credentials
     )
-    return spreadsheet.worksheets()
+    return _call_api(spreadsheet.worksheets)
 
 
 def delete_worksheet(
@@ -243,8 +288,8 @@ def read_sheet(
         json_key=json_key,
         credentials=credentials,
     )
-    records: ListJsonType = sheet.get_all_records(
-        head=head, expected_headers=expected_headers
+    records: ListJsonType = _call_api(
+        lambda: sheet.get_all_records(head=head, expected_headers=expected_headers)
     )
     logger.info("Records successfully retrieve from document!")
     return [
